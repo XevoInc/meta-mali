@@ -69,7 +69,9 @@ SRC_URI = " \
 	file://0018-drm-exynos-switch-to-using-standard-fb-ioctl.patch \
 	file://0019-EXPERIMENTAL-drm-exynos-enable-Vsync-for-dma-fbdev.patch \
 	file://0020-drm-exynos-fix-fbdev-triple-buffering-support.patch \
+	file://0021-kernel-use-the-gnu89-standard-explicitly.patch \
 "
+
 SRCBRANCH = "odroidxu3-3.10.y"
 SRCREV = "36898ffe2082ad378f2207555eee0ad22e21381c"
 SRCREV_machine = "${SRCREV}"
