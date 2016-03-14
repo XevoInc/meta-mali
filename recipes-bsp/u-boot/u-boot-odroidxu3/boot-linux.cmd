@@ -1,8 +1,6 @@
 echo "Checking if eMMC is present..."
 
-mmc dev 1
-
-if mmc rescan ; then
+if mmc dev 1 ; then
         setenv bootdevice "/dev/mmcblk1p2"
         echo "eMMC device is present, root=$bootdevice"
 else
