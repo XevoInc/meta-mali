@@ -10,11 +10,11 @@ OpenEmbedded set-up
 -------------------
 
 * Get OE meta-data with:
-    git clone -b daisy git://git.openembedded.org/openembedded-core
+    git clone -b jethro git://git.openembedded.org/openembedded-core
 
 * Prepare the build environment:
     cd openembedded-core && \
-    git clone -b 1.26 git://git.openembedded.org/bitbake && \
+    git clone -b 1.28 git://git.openembedded.org/bitbake && \
     source oe-init-build-env
 
 * Add path to meta-mali in openembedded-core/build/conf/bblayers.conf
@@ -27,7 +27,7 @@ Yocto/Poky set-up
 -----------------
 
 * Get Poky meta-data with:
-    git clone -b daisy git://git.yoctoproject.org/poky.git
+    git clone -b jethro git://git.yoctoproject.org/poky.git
 
 * Prepare the build environment:
     cd poky && source oe-init-build-env
