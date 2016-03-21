@@ -65,6 +65,6 @@ do_kernel_configme() {
 }
 
 do_configure_prepend() {
-	oe_runmake odroidxu3_defconfig
+	oe_runmake odroidxu3_no-mali_defconfig
 	oe_runmake oldconfig
 }
