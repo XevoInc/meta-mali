@@ -48,32 +48,11 @@ FILESEXTRAPATHS_prepend:= "${THISDIR}/${PN}_${PV}:"
 LINUX_VERSION ?= "3.10"
 
 SRC_URI = " \
-	git://github.com/hardkernel/linux.git;protocol=git;nocheckout=1;branch=${SRCBRANCH} \
-	file://0001-MALI-upgrade-to-TX011-SW-99002-r5p0-06rel0.patch \
-	file://0002-MALI-platform-5422-fixed-for-r5p0-06rel0.patch \
-	file://0003-ARM-exynos5422_evt0.dtsi-added-IRQ-description.patch \
-	file://0004-MALI-Build-kernel-driver-as-a-module.patch \
-	file://0005-ARM-odroidxu3-enable-CONFIG_PROFILING.patch \
-	file://0006-ARM-odroidxu3_defconfig-enable-Mali-Gator-support.patch \
-	file://0007-MALI-add-gpuinfo-sysfs-entry.patch \
-	file://0008-ARM-drm-exynos-re-enable-support-for-triple-bufferin.patch \
-	file://0009-ARM-drm-exynos-take-a-reference-to-the-DMA-buf.patch \
-	file://0010-DRM-EXYNOS-Add-dma_buf-mmap-support.patch \
-	file://0011-CHROMIUM-drm-exynos-dmabuf-Use-dma_mmap_attrs-to-mma.patch \
-	file://0012-drivers-gpu-arm-midgard-update-to-r6p0-02rel0.patch \
-	file://0013-drivers-gpu-arm-midgard-fix-5422-platform-files-for-.patch \
-	file://0014-drm-exynos-Clear-vm_pgoff-before-forwarding-mmap.patch \
-	file://0015-ARM-DMA-Use-vm_pgoff-for-IOMMU-mmap.patch \
-	file://0016-drm-exynos-fix-formating-in-some-functions.patch \
-	file://0017-fbdev-add-dma-buf-support.patch \
-	file://0018-drm-exynos-switch-to-using-standard-fb-ioctl.patch \
-	file://0019-EXPERIMENTAL-drm-exynos-enable-Vsync-for-dma-fbdev.patch \
-	file://0020-drm-exynos-fix-fbdev-triple-buffering-support.patch \
-	file://0021-kernel-use-the-gnu89-standard-explicitly.patch \
+	git://github.com/ARM-software/linux.git;protocol=https;nocheckout=1;branch=${SRCBRANCH} \
 "
 
-SRCBRANCH = "odroidxu3-3.10.y"
-SRCREV = "36898ffe2082ad378f2207555eee0ad22e21381c"
+SRCBRANCH = "odroidxu3-3.10.y-mali-a"
+SRCREV = "odroidxu3-3.10.y-mali-a-003"
 SRCREV_machine = "${SRCREV}"
 
 PR = "69"
@@ -88,8 +67,4 @@ do_kernel_configme() {
 do_configure_prepend() {
 	oe_runmake odroidxu3_defconfig
 	oe_runmake oldconfig
-}
-
-do_kernel_checkout_append() {
-	git branch master
 }
