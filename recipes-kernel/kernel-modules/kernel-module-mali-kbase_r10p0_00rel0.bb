@@ -2,12 +2,12 @@ require kernel-module-mali-kbase.inc
 
 inherit module
 
-MALI_PACKAGE_NAME = "TX011-SW-99002-r6p0-02rel0"
+MALI_PACKAGE_NAME = "TX011-SW-99002-r10p0-00rel0"
 
-SRC_URI[driver.md5sum] = "6785d3d975f208e8c2ac38d3d0bf1ba1"
-SRC_URI[driver.sha256sum] = "a05a82732e8c2bd3bbd3e9ff3967308f67010add210bb21cdc821fb1f38b2eb6"
+SRC_URI[driver.md5sum] = "325d0cf7500e63f4a2cc993aa69585a9"
+SRC_URI[driver.sha256sum] = "887363f6dea2071e698d54f1c6d5a2ebba9a552960b525751e6e5453ab2f4672"
 
-5422_PATCH = "file://mali-5422-platform-r6p0.patch"
+5422_PATCH = "file://mali-5422-platform-r10p0.patch"
 
 python() {
 	platform = d.getVar('MALI_DRIVER_PLATFORM', True)
@@ -17,8 +17,6 @@ python() {
 	config = ["CONFIG_MALI_MIDGARD=m",
 		  "CONFIG_MALI_GATOR_SUPPORT=y",
 		  "CONFIG_MALI_MIDGARD_DVFS=y",
-		  "CONFIG_MALI_MIDGARD_RT_PM=y",
-		  "CONFIG_MALI_MIDGARD_DEBUG_SYS=y",
 		  "CONFIG_MALI_EXPERT=y",
 		  "CONFIG_MALI_PLATFORM_FAKE=y",
 		  "CONFIG_MALI_PLATFORM_THIRDPARTY=y",

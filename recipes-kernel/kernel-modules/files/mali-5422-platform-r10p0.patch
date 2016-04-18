@@ -1,0 +1,4706 @@
+From 37edbf598fb062de6cb5cc11f33adc2fa5d9b6ba Mon Sep 17 00:00:00 2001
+From: Grzegorz Prajsner <grzegorz.prajsner@arm.com>
+Date: Fri, 22 Apr 2016 16:00:29 +0100
+Subject: [PATCH] Add Exynos 5422 platform files (compatible with r10p0)
+
+---
+ .../drivers/gpu/arm/midgard/platform/5422/Kbuild   |   46 +
+ .../drivers/gpu/arm/midgard/platform/5422/Kconfig  |   30 +
+ .../gpu/arm/midgard/platform/5422/gpu_control.c    |  277 +++++
+ .../gpu/arm/midgard/platform/5422/gpu_control.h    |  172 ++++
+ .../midgard/platform/5422/gpu_control_exynos5422.c |  446 +++++++++
+ .../midgard/platform/5422/gpu_control_exynos5430.c |  464 +++++++++
+ .../midgard/platform/5422/gpu_custom_interface.c   | 1053 ++++++++++++++++++++
+ .../midgard/platform/5422/gpu_custom_interface.h   |   23 +
+ .../arm/midgard/platform/5422/gpu_dvfs_governor.c  |  371 +++++++
+ .../arm/midgard/platform/5422/gpu_dvfs_governor.h  |   35 +
+ .../arm/midgard/platform/5422/gpu_dvfs_handler.c   |  424 ++++++++
+ .../arm/midgard/platform/5422/gpu_dvfs_handler.h   |   49 +
+ .../gpu/arm/midgard/platform/5422/gpu_ipa.c        |  249 +++++
+ .../gpu/arm/midgard/platform/5422/gpu_ipa.h        |   21 +
+ .../gpu/arm/midgard/platform/5422/gpu_notifier.c   |  260 +++++
+ .../gpu/arm/midgard/platform/5422/gpu_notifier.h   |   22 +
+ .../platform/5422/mali_kbase_config_platform.h     |   86 ++
+ .../midgard/platform/5422/mali_kbase_platform.c    |  253 +++++
+ .../midgard/platform/5422/mali_kbase_platform.h    |  206 ++++
+ .../gpu/arm/midgard/platform/5422/mali_power.h     |   48 +
+ 20 files changed, 4535 insertions(+)
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kbuild
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kconfig
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5422.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5430.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_config_platform.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.c
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.h
+ create mode 100644 driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_power.h
+
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kbuild b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kbuild
+new file mode 100644
+index 0000000..14af1c9
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kbuild
+@@ -0,0 +1,46 @@
++#
++# (C) COPYRIGHT 2012,2014 ARM Limited. All rights reserved.
++#
++# This program is free software and is provided to you under the terms of the
++# GNU General Public License version 2 as published by the Free Software
++# Foundation, and any use by you of this program is subject to the terms
++# of such GNU licence.
++#
++# A copy of the licence is included with the program, and can also be obtained
++# from Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++# Boston, MA  02110-1301, USA.
++#
++#
++
++SOC_NAME ?= 5430
++
++ifeq ($(CONFIG_SOC_EXYNOS5250),y)
++	SOC_NAME=5250
++endif
++ifeq ($(CONFIG_SOC_EXYNOS5412),y)
++	SOC_NAME=5412
++endif
++ifeq ($(CONFIG_SOC_EXYNOS5420),y)
++	SOC_NAME=5420
++endif
++ifeq ($(CONFIG_SOC_EXYNOS5422),y)
++	SOC_NAME=5422
++endif
++ifeq ($(CONFIG_SOC_EXYNOS5430),y)
++	SOC_NAME=5430
++endif
++
++ccflags-y += -DSOC_NAME=$(SOC_NAME)
++
++SRC += \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/mali_kbase_platform.c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_notifier.c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_control_exynos$(SOC_NAME).c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_control.c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_dvfs_handler.c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_dvfs_governor.c \
++	$(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_custom_interface.c
++
++ifneq ($(CONFIG_CPU_THERMAL_IPA),)
++	SRC += $(MALI_PLATFORM_THIRDPARTY_DIR)/gpu_ipa.c
++endif
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kconfig b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kconfig
+new file mode 100644
+index 0000000..b4842a0
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/Kconfig
+@@ -0,0 +1,30 @@
++#
++# (C) COPYRIGHT 2014 ARM Limited. All rights reserved.
++#
++# This program is free software and is provided to you under the terms of the
++# GNU General Public License version 2 as published by the Free Software
++# Foundation, and any use by you of this program is subject to the terms
++# of such GNU licence.
++#
++# A copy of the licence is included with the program, and can also be obtained
++# from Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++# Boston, MA  02110-1301, USA.
++#
++#
++
++menuconfig MALI_MIDGARD_5422
++	bool "5422 settings"
++	depends on MALI_MIDGARD
++	default y if MALI_PLATFORM_THIRDPARTY_NAME = "5422"
++	help
++	  Control 5422 specific options for the ARM Mali Midgard GPU.
++
++config DYNIMIC_ABB
++	bool "Enable dynimic abb"
++	depends on MALI_MIDGARD_5422
++	default n
++	help
++		Select this option to enable dynimic abb.
++
++
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.c
+new file mode 100644
+index 0000000..3fddd27
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.c
+@@ -0,0 +1,277 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_control.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/pm_qos.h>
++#include <mach/bts.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_control.h"
++#include "mach/asv-exynos.h"
++
++struct kbase_device *pkbdev;
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++static int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state);
++#endif
++static int gpu_set_clk_vol(struct kbase_device *kbdev, int clock, int voltage);
++
++int gpu_control_state_set(struct kbase_device *kbdev, gpu_control_state state, int param)
++{
++	int ret = 0, voltage;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	unsigned long flags;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	mutex_lock(&platform->gpu_clock_lock);
++	switch (state) {
++	case GPU_CONTROL_CLOCK_ON:
++		ret = gpu_clock_on(platform);
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++		if (!kbdev->pm.backend.metrics.timer_active) {
++			spin_lock_irqsave(&kbdev->pm.backend.metrics.lock,
++									flags);
++			kbdev->pm.backend.metrics.timer_active = true;
++			spin_unlock_irqrestore(&kbdev->pm.backend.metrics.lock,
++									flags);
++			hrtimer_start(&kbdev->pm.backend.metrics.timer,
++				HR_TIMER_DELAY_MSEC(platform->polling_speed),
++							HRTIMER_MODE_REL);
++		}
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_UPDATE_TIME_IN_STATE, 0);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++		break;
++	case GPU_CONTROL_CLOCK_OFF:
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++		if (platform->dvfs_status &&
++				kbdev->pm.backend.metrics.timer_active) {
++			spin_lock_irqsave(&kbdev->pm.backend.metrics.lock,
++									flags);
++			kbdev->pm.backend.metrics.timer_active = false;
++			spin_unlock_irqrestore(&kbdev->pm.backend.metrics.lock,
++									flags);
++			hrtimer_cancel(&kbdev->pm.backend.metrics.timer);
++		}
++		gpu_pm_qos_command(platform, GPU_CONTROL_PM_QOS_RESET);
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_UPDATE_TIME_IN_STATE, platform->cur_clock);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++		ret = gpu_clock_off(platform);
++		break;
++	case GPU_CONTROL_CHANGE_CLK_VOL:
++		ret = gpu_set_clk_vol(kbdev, param, gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_GET_VOLTAGE, param));
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++		if (ret == 0) {
++			ret = gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_GET_LEVEL, platform->cur_clock);
++			if (ret >= 0) {
++				spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++				platform->step = ret;
++				spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			} else {
++				GPU_LOG(DVFS_ERROR, "Invalid dvfs level returned [%d]\n", GPU_CONTROL_CHANGE_CLK_VOL);
++			}
++		}
++		if (gpu_pm_qos_command(platform, GPU_CONTROL_PM_QOS_SET) < -1)
++			GPU_LOG(DVFS_ERROR, "failed to set the PM_QOS\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++		break;
++	case GPU_CONTROL_PREPARE_ON:
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++		if ((platform->dvfs_status && platform->wakeup_lock) &&
++				(platform->table[platform->step].clock < MALI_DVFS_START_FREQ))
++			platform->cur_clock = MALI_DVFS_START_FREQ;
++
++		if (platform->min_lock > 0)
++			platform->cur_clock = MAX(platform->min_lock, platform->cur_clock);
++		else if (platform->max_lock > 0)
++			platform->cur_clock = MIN(platform->max_lock, platform->cur_clock);
++
++		platform->down_requirement = platform->table[platform->step].stay_count;
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++		break;
++	case GPU_CONTROL_IS_POWER_ON:
++		ret = gpu_is_power_on();
++		break;
++	case GPU_CONTROL_SET_MARGIN:
++		voltage = MAX(platform->table[platform->step].voltage + platform->voltage_margin, COLD_MINIMUM_VOL);
++		gpu_set_voltage(platform, voltage);
++		GPU_LOG(DVFS_DEBUG, "we set the voltage: %d\n", voltage);
++		break;
++	default:
++		return -1;
++	}
++	mutex_unlock(&platform->gpu_clock_lock);
++
++	return ret;
++}
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++#ifdef CONFIG_BUS_DEVFREQ
++static struct pm_qos_request exynos5_g3d_mif_qos;
++static struct pm_qos_request exynos5_g3d_int_qos;
++static struct pm_qos_request exynos5_g3d_cpu_kfc_min_qos;
++static struct pm_qos_request exynos5_g3d_cpu_egl_max_qos;
++#endif /* CONFIG_BUS_DEVFREQ */
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++static int gpu_pm_qos_command(struct exynos_context *platform, gpu_pmqos_state state)
++{
++#ifdef CONFIG_BUS_DEVFREQ
++	switch (state) {
++	case GPU_CONTROL_PM_QOS_INIT:
++		pm_qos_add_request(&exynos5_g3d_mif_qos, PM_QOS_BUS_THROUGHPUT, 0);
++		pm_qos_add_request(&exynos5_g3d_int_qos, PM_QOS_DEVICE_THROUGHPUT, 0);
++		pm_qos_add_request(&exynos5_g3d_cpu_kfc_min_qos, PM_QOS_KFC_FREQ_MIN, 0);
++		pm_qos_add_request(&exynos5_g3d_cpu_egl_max_qos, PM_QOS_CPU_FREQ_MAX, PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE);
++		break;
++	case GPU_CONTROL_PM_QOS_DEINIT:
++		pm_qos_remove_request(&exynos5_g3d_mif_qos);
++		pm_qos_remove_request(&exynos5_g3d_int_qos);
++		pm_qos_remove_request(&exynos5_g3d_cpu_kfc_min_qos);
++		pm_qos_remove_request(&exynos5_g3d_cpu_egl_max_qos);
++		break;
++	case GPU_CONTROL_PM_QOS_SET:
++		if (platform->step < 0)
++			return -1;
++		pm_qos_update_request(&exynos5_g3d_mif_qos, platform->table[platform->step].mem_freq);
++		pm_qos_update_request(&exynos5_g3d_int_qos, platform->table[platform->step].int_freq);
++		pm_qos_update_request(&exynos5_g3d_cpu_kfc_min_qos, platform->table[platform->step].cpu_freq);
++		pm_qos_update_request(&exynos5_g3d_cpu_egl_max_qos, platform->table[platform->step].cpu_max_freq);
++		break;
++	case GPU_CONTROL_PM_QOS_RESET:
++		pm_qos_update_request(&exynos5_g3d_mif_qos, 0);
++		pm_qos_update_request(&exynos5_g3d_int_qos, 0);
++		pm_qos_update_request(&exynos5_g3d_cpu_kfc_min_qos, 0);
++		pm_qos_update_request(&exynos5_g3d_cpu_egl_max_qos, PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE);
++	default:
++		break;
++	}
++#endif /* CONFIG_BUS_DEVFREQ */
++	return 0;
++}
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++static int gpu_set_clk_vol(struct kbase_device *kbdev, int clock, int voltage)
++{
++	static int prev_clock = -1;
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if ((clock > platform->table[platform->table_size-1].clock) || (clock < platform->table[0].clock)) {
++		GPU_LOG(DVFS_ERROR, "Mismatch clock error (%d)\n", clock);
++		return -1;
++	}
++
++	if (platform->voltage_margin)
++		voltage = MAX(voltage + platform->voltage_margin, COLD_MINIMUM_VOL);
++
++	if (clock > prev_clock) {
++		gpu_set_voltage(platform, voltage);
++#ifdef CONFIG_DYNIMIC_ABB
++        set_match_abb(ID_G3D, platform->devfreq_g3d_asv_abb[platform->step]);
++#endif
++		gpu_set_clock(platform, clock);
++#if defined(CONFIG_EXYNOS5422_BTS)
++		bts_scen_update(TYPE_G3D_FREQ, clock);
++#endif /* CONFIG_EXYNOS5422_BTS */
++	} else {
++#if defined(CONFIG_EXYNOS5422_BTS)
++		bts_scen_update(TYPE_G3D_FREQ, clock);
++#endif /* CONFIG_EXYNOS5422_BTS */
++		gpu_set_clock(platform, clock);
++#ifdef CONFIG_DYNIMIC_ABB
++        set_match_abb(ID_G3D, platform->devfreq_g3d_asv_abb[platform->step]);
++#endif
++		gpu_set_voltage(platform, voltage);
++	}
++
++	GPU_LOG(DVFS_INFO, "[G3D]clk[%d -> %d], vol[%d + %d]\n", prev_clock, clock, voltage, platform->voltage_margin);
++
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_UPDATE_TIME_IN_STATE, prev_clock);
++
++	prev_clock = clock;
++
++	return 0;
++}
++
++int gpu_control_module_init(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++#ifdef KBASE_PM_RUNTIME
++	platform->exynos_pm_domain = gpu_get_pm_domain(kbdev);
++#endif /* KBASE_PM_RUNTIME */
++
++	pkbdev = kbdev;
++
++	if (gpu_power_init(kbdev) < 0) {
++		GPU_LOG(DVFS_ERROR, "failed to initialize g3d power\n");
++		goto out;
++	}
++
++	if (gpu_clock_init(kbdev) < 0) {
++		GPU_LOG(DVFS_ERROR, "failed to initialize g3d clock\n");
++		goto out;
++	}
++
++#ifdef CONFIG_REGULATOR
++	if (gpu_regulator_init(platform) < 0) {
++		GPU_LOG(DVFS_ERROR, "failed to initialize g3d regulator\n");
++		goto regulator_init_fail;
++	}
++#endif /* CONFIG_REGULATOR */
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_pm_qos_command(platform, GPU_CONTROL_PM_QOS_INIT);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++	return 0;
++#ifdef CONFIG_REGULATOR
++regulator_init_fail:
++	gpu_regulator_disable(platform);
++#endif /* CONFIG_REGULATOR */
++out:
++	return -EPERM;
++}
++
++void gpu_control_module_term(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return;
++
++#ifdef KBASE_PM_RUNTIME
++	platform->exynos_pm_domain = NULL;
++#endif /* KBASE_PM_RUNTIME */
++#ifdef CONFIG_REGULATOR
++	gpu_regulator_disable(platform);
++#endif /* CONFIG_REGULATOR */
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_pm_qos_command(platform, GPU_CONTROL_PM_QOS_DEINIT);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++}
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.h
+new file mode 100644
+index 0000000..763674e
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control.h
+@@ -0,0 +1,172 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_control.h
++ * DVFS
++ */
++
++#ifndef _GPU_CONTROL_H_
++#define _GPU_CONTROL_H_
++
++typedef enum {
++	GPU_CONTROL_CLOCK_ON = 0,
++	GPU_CONTROL_CLOCK_OFF,
++	GPU_CONTROL_CHANGE_CLK_VOL,
++	GPU_CONTROL_PREPARE_ON,
++	GPU_CONTROL_IS_POWER_ON,
++	GPU_CONTROL_SET_MARGIN,
++} gpu_control_state;
++
++typedef enum {
++	GPU_CONTROL_PM_QOS_INIT = 0,
++	GPU_CONTROL_PM_QOS_DEINIT,
++	GPU_CONTROL_PM_QOS_SET,
++	GPU_CONTROL_PM_QOS_RESET,
++} gpu_pmqos_state;
++
++/* mali_kbase_platform */
++#if SOC_NAME == 5422
++#ifdef CONFIG_SOC_EXYNOS5422_REV_0
++#define G3D_MAX_FREQ    543000
++#else
++#define G3D_MAX_FREQ    533000
++#endif /* CONFIG_SOC_EXYNOS5422_REV_0 */
++#define G3D_MIN_FREQ    177000
++#elif SOC_NAME == 5430
++#define G3D_MAX_FREQ    600000
++#define G3D_MIN_FREQ    160000
++#elif SOC_NAME == 5260
++#define G3D_MAX_FREQ    480000
++#define G3D_MIN_FREQ    160000
++#else
++#error SOC_NAME should be specified.
++#endif /* SOC_NAME */
++
++/* GPU NOTIFIER */
++#if SOC_NAME == 5422
++#define GPU_THROTTLING_90_95    480
++#define GPU_THROTTLING_95_100   266
++#define GPU_THROTTLING_100_105  177
++#define GPU_THROTTLING_105_110  177
++#define GPU_TRIPPING_110        177
++#define VOLTAGE_OFFSET_MARGIN   37500
++#define RUNTIME_PM_DELAY_TIME   50
++#elif SOC_NAME == 5430
++#define GPU_THROTTLING_90_95    420
++#define GPU_THROTTLING_95_100   350
++#define GPU_THROTTLING_100_105  266
++#define GPU_THROTTLING_105_110  160
++#define GPU_TRIPPING_110        160
++#define VOLTAGE_OFFSET_MARGIN   37500
++#define RUNTIME_PM_DELAY_TIME   100
++#define GPU_DYNAMIC_CLK_GATING  1
++#elif SOC_NAME == 5260
++#define GPU_THROTTLING_90_95	266
++#define GPU_THROTTLING_95_100	266
++#define GPU_THROTTLING_100_105	160
++#define GPU_THROTTLING_105_110	160
++#define GPU_TRIPPING_110        160
++#define VOLTAGE_OFFSET_MARGIN	37500
++#define RUNTIME_PM_DELAY_TIME	100
++#else
++#error SOC_NAME should be specified.
++#endif /* SOC_NAME */
++
++/* GPU DVFS HANDLER */
++#if SOC_NAME == 5422
++#define MALI_DVFS_START_FREQ		266
++#define MALI_DVFS_BL_CONFIG_FREQ	266
++#elif SOC_NAME == 5430
++#define MALI_DVFS_START_FREQ		266
++#define MALI_DVFS_BL_CONFIG_FREQ	266
++#elif SOC_NAME == 5260
++#define MALI_DVFS_START_FREQ		350
++#define MALI_DVFS_BL_CONFIG_FREQ	350
++#define ACLK_G3D_STAT				0x10
++#else
++#error SOC_NAME should be specified.
++#endif
++
++#ifdef CONFIG_ARM_EXYNOS5422_BUS_DEVFREQ
++#define CONFIG_BUS_DEVFREQ
++#endif
++
++#ifdef CONFIG_ARM_EXYNOS5430_BUS_DEVFREQ
++#define CONFIG_BUS_DEVFREQ
++#endif
++
++#ifdef CONFIG_ARM_EXYNOS5260_BUS_DEVFREQ
++#define CONFIG_BUS_DEVFREQ
++#endif
++
++#define GPU_DVFS_FREQUENCY		100
++#ifdef CONFIG_CPU_THERMAL_IPA
++#define GPU_DVFS_TIME_INTERVAL	5
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++/* GPU DVFS GOVERNOR */
++#if SOC_NAME == 5422
++#define G3D_GOVERNOR_DEFAULT_CLOCK_DEFAULT  266
++#define G3D_GOVERNOR_DEFAULT_CLOCK_STATIC   266
++#define G3D_GOVERNOR_STATIC_PERIOD          10
++#define G3D_GOVERNOR_DEFAULT_CLOCK_BOOSTER  266
++#elif SOC_NAME == 5430
++#define G3D_GOVERNOR_DEFAULT_CLOCK_DEFAULT  266
++#define G3D_GOVERNOR_DEFAULT_CLOCK_STATIC   266
++#define G3D_GOVERNOR_STATIC_PERIOD          10
++#define G3D_GOVERNOR_DEFAULT_CLOCK_BOOSTER  266
++#elif SOC_NAME == 5260
++#define G3D_GOVERNOR_DEFAULT_CLOCK_DEFAULT  266
++#define G3D_GOVERNOR_DEFAULT_CLOCK_STATIC   350
++#define G3D_GOVERNOR_STATIC_PERIOD          10
++#define G3D_GOVERNOR_DEFAULT_CLOCK_BOOSTER  266
++#else
++#error SOC_NAME should be specified.
++#endif /* SOC_NAME */
++
++/* GPU CONTROL */
++#if SOC_NAME == 5422
++#define COLD_MINIMUM_VOL		950000
++#define GPU_DEFAULT_VOLTAGE		1037500
++#elif SOC_NAME == 5430
++#define COLD_MINIMUM_VOL		950000
++#define GPU_DEFAULT_VOLTAGE		1025000
++#elif SOC_NAME == 5260
++#define COLD_MINIMUM_VOL		950000
++#define GPU_DEFAULT_VOLTAGE		900000
++#else
++#error SOC_NAME should be specified.
++#endif /* SOC_NAME */
++
++#define MALI_MIDGARD_DEFAULT_CLOCK (MALI_DVFS_START_FREQ*MHZ)
++
++struct exynos_context;
++
++struct exynos_pm_domain *gpu_get_pm_domain(struct kbase_device *kbdev);
++int get_cpu_clock_speed(u32 *cpu_clock);
++int gpu_is_power_on(void);
++int gpu_power_init(struct kbase_device *kbdev);
++int gpu_is_clock_on(struct exynos_context *platform);
++int gpu_clock_on(struct exynos_context *platform);
++int gpu_clock_off(struct exynos_context *platform);
++int gpu_set_clock(struct exynos_context *platform, int freq);
++int gpu_clock_init(struct kbase_device *kbdev);
++int gpu_set_voltage(struct exynos_context *platform, int vol);
++int gpu_regulator_enable(struct exynos_context *platform);
++int gpu_regulator_disable(struct exynos_context *platform);
++int gpu_regulator_init(struct exynos_context *platform);
++
++int gpu_control_state_set(struct kbase_device *kbdev, gpu_control_state state, int param);
++int gpu_control_module_init(struct kbase_device *kbdev);
++void gpu_control_module_term(struct kbase_device *kbdev);
++
++#endif /* _GPU_CONTROL_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5422.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5422.c
+new file mode 100644
+index 0000000..bd2e9a8
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5422.c
+@@ -0,0 +1,446 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_control_exynos5422.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/regulator/driver.h>
++
++#include <mach/asv-exynos.h>
++#include <mach/pm_domains.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_control.h"
++
++extern struct kbase_device *pkbdev;
++
++#ifdef KBASE_PM_RUNTIME
++struct exynos_pm_domain *gpu_get_pm_domain(struct kbase_device *kbdev)
++{
++	struct platform_device *pdev = NULL;
++	struct device_node *np = NULL;
++	struct exynos_pm_domain *pd_temp, *pd = NULL;
++
++	for_each_compatible_node(np, NULL, "samsung,exynos-pd")
++	{
++		if (!of_device_is_available(np))
++			continue;
++
++		pdev = of_find_device_by_node(np);
++		pd_temp = platform_get_drvdata(pdev);
++		if (!strcmp("pd-g3d", pd_temp->genpd.name)) {
++			pd = pd_temp;
++			break;
++		}
++	}
++
++	return pd;
++}
++#endif
++
++int get_cpu_clock_speed(u32 *cpu_clock)
++{
++	struct clk *cpu_clk;
++	u32 freq = 0;
++	cpu_clk = clk_get(NULL, "armclk");
++	if (IS_ERR(cpu_clk))
++		return PTR_ERR(cpu_clk);
++	freq = clk_get_rate(cpu_clk);
++	*cpu_clock = (freq/MHZ);
++	return 0;
++}
++
++int gpu_is_power_on(void)
++{
++	return ((__raw_readl(EXYNOS5422_G3D_STATUS) & EXYNOS_INT_LOCAL_PWR_EN) == EXYNOS_INT_LOCAL_PWR_EN) ? 1 : 0;
++}
++
++int gpu_power_init(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	GPU_LOG(DVFS_INFO, "g3d power initialized\n");
++
++	return 0;
++}
++
++static int gpu_update_clock(struct exynos_context *platform)
++{
++	if (!platform->clk_g3d_ip) {
++		GPU_LOG(DVFS_ERROR, "clk_g3d_ip is not initialized\n");
++		return -ENODEV;
++	}
++
++	platform->cur_clock = clk_get_rate(platform->clk_g3d_ip)/MHZ;
++	return 0;
++}
++
++int gpu_is_clock_on(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++	return __clk_is_enabled(platform->clk_g3d_ip);
++}
++
++int gpu_clock_on(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++	if (!gpu_is_power_on()) {
++		GPU_LOG(DVFS_WARNING, "can't set clock on in g3d power off status\n");
++		return -1;
++	}
++
++	if (platform->clk_g3d_ip && !gpu_is_clock_on(platform)) {
++		(void) clk_prepare_enable(platform->clk_g3d_ip);
++	}
++
++	return 0;
++}
++
++int gpu_clock_off(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++	if (platform->clk_g3d_ip && gpu_is_clock_on(platform)) {
++		(void)clk_disable_unprepare(platform->clk_g3d_ip);
++	}
++
++	return 0;
++}
++
++
++unsigned long get_dpll_freq(int curr, int targ)
++{
++	unsigned long dpll_clk;
++	int divider;
++
++	switch(targ)
++	{
++		case 480: case 420: case 350:
++			divider = 2;
++			break;
++		case 266:
++			divider = 2 + (targ < curr ? 0:1);
++			break;
++		case 177:
++			divider = 3 + (targ < curr ? 0:1);
++			break;
++		case 100:
++			divider = 4;
++			break;
++		default:
++			divider = 1;
++		 break;
++	}
++	dpll_clk = curr / divider + 5;
++
++	return (dpll_clk*1000000);
++}
++
++int gpu_set_clock(struct exynos_context *platform, int freq)
++{
++	long g3d_rate_prev = -1;
++	unsigned long g3d_rate = freq * MHZ;
++	unsigned long tmp = 0;
++	int ret;
++
++	if (platform->clk_g3d_ip == 0)
++		return -ENODEV;
++
++#ifdef KBASE_PM_RUNTIME
++	if (platform->exynos_pm_domain)
++		mutex_lock(&platform->exynos_pm_domain->access_lock);
++#endif /* KBASE_PM_RUNTIME */
++
++	if (!gpu_is_power_on()) {
++		ret = -1;
++		GPU_LOG(DVFS_WARNING, "gpu_set_clk_vol in the G3D power-off state!\n");
++		goto err;
++	}
++
++	if (!gpu_is_clock_on(platform)) {
++		ret = -1;
++		GPU_LOG(DVFS_WARNING, "gpu_set_clk_vol in the G3D clock-off state!\n");
++		goto err;
++	}
++
++	g3d_rate_prev = clk_get_rate(platform->fout_vpll)/MHZ;
++
++	/* if changed the VPLL rate, set rate for VPLL and wait for lock time */
++	if (freq != g3d_rate_prev) {
++		/*for stable clock input.*/
++		ret = clk_set_rate(platform->dout_aclk_g3d,
++			get_dpll_freq(clk_get_rate(platform->clk_g3d_ip)/1000000, freq));
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_rate [dout_aclk_g3d]\n");
++			goto err;
++		}
++
++		/*change here for future stable clock changing*/
++		ret = clk_set_parent(platform->mout_aclk_g3d, platform->mout_dpll_ctrl);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_parent [mout_aclk_g3d]\n");
++			goto err;
++		}
++
++		/*change g3d pll*/
++		ret = clk_set_rate(platform->fout_vpll, g3d_rate);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_rate [fout_vpll]\n");
++			goto err;
++		}
++
++		/*restore parent*/
++		ret = clk_set_parent(platform->mout_aclk_g3d, platform->mout_vpll_ctrl);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_parent [mout_aclk_g3d]\n");
++			goto err;
++		}
++
++		g3d_rate_prev = g3d_rate;
++	}
++
++	ret = clk_set_rate(platform->dout_aclk_g3d, g3d_rate);
++	if (ret < 0) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_set_rate [dout_aclk_g3d]\n");
++		goto err;
++	}
++
++	/* Waiting for clock is stable */
++	do {
++		tmp = __raw_readl(EXYNOS5_CLK_DIV_STAT_TOP2);
++	} while (tmp & 0x10000);
++
++	gpu_update_clock(platform);
++	KBASE_TRACE_ADD_EXYNOS(pkbdev, LSI_CLOCK_VALUE, NULL, NULL, 0u, g3d_rate/MHZ);
++	GPU_LOG(DVFS_DEBUG, "[G3D] clock set: %ld\n", g3d_rate / MHZ);
++	GPU_LOG(DVFS_DEBUG, "[G3D] clock get: %d\n", platform->cur_clock);
++err:
++#ifdef KBASE_PM_RUNTIME
++	if (platform->exynos_pm_domain)
++		mutex_unlock(&platform->exynos_pm_domain->access_lock);
++#endif /* KBASE_PM_RUNTIME */
++	return ret;
++}
++
++static int gpu_get_clock(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	KBASE_DEBUG_ASSERT(kbdev != NULL);
++
++	/*
++	 * EXYNOS5422 3D clock description
++	 * normal usage: mux(vpll) -> divider -> mux_sw -> mux_user -> aclk_g3d
++	 * on clock changing: mux(dpll) -> divider(3) -> mux_sw -> mux_user -> aclk_g3d
++	 */
++
++	platform->fout_vpll = clk_get(NULL, "fout_vpll");
++	if (IS_ERR(platform->fout_vpll)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [fout_vpll]\n");
++		return PTR_ERR(platform->fout_vpll);
++	}
++
++	platform->mout_vpll_ctrl = clk_get(kbdev->dev, "mout_vpll_ctrl"); /* same as sclk_vpll */
++	if (IS_ERR(platform->mout_vpll_ctrl)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_vpll_ctrl]\n");
++		return PTR_ERR(platform->mout_vpll_ctrl);
++	}
++
++	platform->mout_dpll_ctrl = clk_get(kbdev->dev, "mout_dpll_ctrl"); /* same as sclk_dpll */
++	if (IS_ERR(platform->mout_dpll_ctrl)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_dpll_ctrl]\n");
++		return PTR_ERR(platform->mout_dpll_ctrl);
++	}
++
++	platform->mout_aclk_g3d = clk_get(kbdev->dev, "mout_aclk_g3d"); /* set parents v or d pll */
++	if (IS_ERR(platform->mout_aclk_g3d)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_aclk_g3d]\n");
++		return PTR_ERR(platform->mout_aclk_g3d);
++	}
++
++	platform->dout_aclk_g3d = clk_get(kbdev->dev, "dout_aclk_g3d"); /* divider usage */
++	if (IS_ERR(platform->dout_aclk_g3d)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [dout_aclk_g3d]\n");
++		return PTR_ERR(platform->dout_aclk_g3d);
++	}
++
++	platform->mout_aclk_g3d_sw = clk_get(kbdev->dev, "mout_aclk_g3d_sw");
++	if (IS_ERR(platform->mout_aclk_g3d_sw)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_aclk_g3d_sw]\n");
++		return PTR_ERR(platform->mout_aclk_g3d_sw);
++	}
++
++	platform->mout_aclk_g3d_user = clk_get(kbdev->dev, "mout_aclk_g3d_user");
++	if (IS_ERR(platform->mout_aclk_g3d_user)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_aclk_g3d_user]\n");
++		return PTR_ERR(platform->mout_aclk_g3d_user);
++	}
++
++	platform->clk_g3d_ip = clk_get(kbdev->dev, "clk_g3d_ip");
++	clk_prepare_enable(platform->clk_g3d_ip);
++	if (IS_ERR(platform->clk_g3d_ip)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [clk_g3d_ip]\n");
++		return PTR_ERR(platform->clk_g3d_ip);
++	}
++
++	return 0;
++}
++
++int gpu_clock_init(struct kbase_device *kbdev)
++{
++	int ret;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	KBASE_DEBUG_ASSERT(kbdev != NULL);
++
++	ret = gpu_get_clock(kbdev);
++	if (ret < 0)
++		return ret;
++
++	GPU_LOG(DVFS_INFO, "g3d clock initialized\n");
++
++	return 0;
++}
++
++static int gpu_update_voltage(struct exynos_context *platform)
++{
++#ifdef CONFIG_REGULATOR
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	platform->cur_voltage = regulator_get_voltage(platform->g3d_regulator);
++#endif /* CONFIG_REGULATOR */
++	return 0;
++}
++
++int gpu_set_voltage(struct exynos_context *platform, int vol)
++{
++	static int _vol = -1;
++	int err;
++
++	if (_vol == vol)
++		return 0;
++
++#ifdef CONFIG_REGULATOR
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_set_voltage(platform->g3d_regulator, vol, vol);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to set voltage, voltage: %d\n", vol);
++		return err;
++	}
++#endif /* CONFIG_REGULATOR */
++
++	_vol = vol;
++
++	gpu_update_voltage(platform);
++	KBASE_TRACE_ADD_EXYNOS(pkbdev, LSI_VOL_VALUE, NULL, NULL, 0u, vol);
++	GPU_LOG(DVFS_DEBUG, "[G3D] voltage set:%d\n", vol);
++	GPU_LOG(DVFS_DEBUG, "[G3D] voltage get:%d\n", platform->cur_voltage);
++
++	return 0;
++}
++
++#ifdef CONFIG_REGULATOR
++int gpu_regulator_enable(struct exynos_context *platform)
++{
++	int err;
++
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_enable(platform->g3d_regulator);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to enable g3d regulator\n");
++		return err;
++	}
++	return 0;
++}
++
++int gpu_regulator_disable(struct exynos_context *platform)
++{
++	int err;
++
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_disable(platform->g3d_regulator);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to disable g3d regulator\n");
++		return err;
++	}
++	return 0;
++}
++
++int gpu_regulator_init(struct exynos_context *platform)
++{
++	int gpu_voltage = 0;
++	int err;
++
++	platform->g3d_regulator = regulator_get(NULL, "vdd_g3d");
++	if (IS_ERR(platform->g3d_regulator)) {
++		err = PTR_ERR(platform->g3d_regulator);
++		GPU_LOG(DVFS_ERROR, "failed to get g3d regulator, 0x%p\n",
++				platform->g3d_regulator);
++		platform->g3d_regulator = NULL;
++		return err;
++	}
++
++	err = gpu_regulator_enable(platform);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to enable g3d regulator\n");
++		platform->g3d_regulator = NULL;
++		return err;
++	}
++
++	gpu_voltage = get_match_volt(ID_G3D, MALI_DVFS_BL_CONFIG_FREQ*1000);
++	if (gpu_voltage == 0)
++		gpu_voltage = GPU_DEFAULT_VOLTAGE;
++
++	err = gpu_set_voltage(platform, gpu_voltage);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to set g3d regulator operating voltage [%d]\n",
++				gpu_voltage);
++		return err;
++	}
++
++	GPU_LOG(DVFS_INFO, "g3d regulator initialized\n");
++
++	return 0;
++}
++#endif /* CONFIG_REGULATOR */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5430.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5430.c
+new file mode 100644
+index 0000000..cfe1f82
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_control_exynos5430.c
+@@ -0,0 +1,464 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_control_exynos5430.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/regulator/driver.h>
++
++#include <mach/asv-exynos.h>
++#include <mach/pm_domains.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_control.h"
++
++#define L2CONFIG_MO_1BY8			0b0101
++#define L2CONFIG_MO_1BY4			0b1010
++#define L2CONFIG_MO_1BY2			0b1111
++#define L2CONFIG_MO_NO_RESTRICT		0
++
++#if GPU_DYNAMIC_CLK_GATING
++#define G3D_NOC_DCG_EN 0x14a90200
++#endif
++
++extern struct kbase_device *pkbdev;
++
++#ifdef KBASE_PM_RUNTIME
++struct exynos_pm_domain *gpu_get_pm_domain(struct kbase_device *kbdev)
++{
++	struct platform_device *pdev = NULL;
++	struct device_node *np = NULL;
++	struct exynos_pm_domain *pd_temp, *pd = NULL;
++
++	for_each_compatible_node(np, NULL, "samsung,exynos-pd")
++	{
++		if (!of_device_is_available(np))
++			continue;
++
++		pdev = of_find_device_by_node(np);
++		pd_temp = platform_get_drvdata(pdev);
++		if (!strcmp("pd-g3d", pd_temp->genpd.name)) {
++			pd = pd_temp;
++			break;
++		}
++	}
++
++	return pd;
++}
++#endif
++
++int get_cpu_clock_speed(u32 *cpu_clock)
++{
++	struct clk *cpu_clk;
++	u32 freq = 0;
++	cpu_clk = clk_get(NULL, "armclk");
++	if (IS_ERR(cpu_clk))
++		return PTR_ERR(cpu_clk);
++	freq = clk_get_rate(cpu_clk);
++	*cpu_clock = (freq/MHZ);
++	return 0;
++}
++
++int gpu_is_power_on(void)
++{
++	return ((__raw_readl(EXYNOS5430_G3D_STATUS) & EXYNOS_INT_LOCAL_PWR_EN) == EXYNOS_INT_LOCAL_PWR_EN) ? 1 : 0;
++}
++
++int gpu_power_init(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	GPU_LOG(DVFS_INFO, "g3d power initialized\n");
++
++	return 0;
++}
++
++static int gpu_update_clock(struct exynos_context *platform)
++{
++	if (!platform->aclk_g3d) {
++		GPU_LOG(DVFS_ERROR, "aclk_g3d is not initialized\n");
++		return -ENODEV;
++	}
++
++	platform->cur_clock = clk_get_rate(platform->aclk_g3d)/MHZ;
++	return 0;
++}
++
++int gpu_is_clock_on(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++	return __clk_is_enabled(platform->aclk_g3d);
++}
++
++#if GPU_DYNAMIC_CLK_GATING
++int gpu_dcg_enable(struct exynos_context *platform)
++{
++       int *p_dcg;
++
++       if (!platform)
++               return -ENODEV;
++
++       if (!gpu_is_power_on()) {
++               GPU_LOG(DVFS_WARNING, "can't set clock on in g3d power off status\n");
++               return -1;
++       }
++
++       p_dcg = (int *)ioremap_nocache(G3D_NOC_DCG_EN, 4);
++       if (platform->cur_clock < 275) *p_dcg = 0x3;    /* ACLK_G3DND_600 is the same as the ACLK_G3D, so the current clock is read */
++       else *p_dcg = 0x1;
++       iounmap(p_dcg);
++
++       return 0;
++}
++
++int gpu_dcg_disable(struct exynos_context *platform)
++{
++       int *p_dcg;
++
++       if (!platform)
++               return -ENODEV;
++
++       p_dcg = (int *)ioremap_nocache(G3D_NOC_DCG_EN, 4);
++       *p_dcg = 0x0;
++       iounmap(p_dcg);
++
++       return 0;
++}
++#endif
++
++int gpu_clock_on(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++	if (!gpu_is_power_on()) {
++		GPU_LOG(DVFS_WARNING, "can't set clock on in g3d power off status\n");
++		return -1;
++	}
++
++	if (platform->clk_g3d_status == 1)
++		return 0;
++
++	if (platform->aclk_g3d)
++		(void) clk_prepare_enable(platform->aclk_g3d);
++
++#if GPU_DYNAMIC_CLK_GATING
++	gpu_dcg_enable(platform);
++#endif
++	platform->clk_g3d_status = 1;
++
++	return 0;
++}
++
++int gpu_clock_off(struct exynos_context *platform)
++{
++	if (!platform)
++		return -ENODEV;
++
++#if GPU_DYNAMIC_CLK_GATING
++	gpu_dcg_disable(platform);
++#endif
++
++	if (platform->clk_g3d_status == 0)
++		return 0;
++
++	if (platform->aclk_g3d)
++		(void)clk_disable_unprepare(platform->aclk_g3d);
++
++	platform->clk_g3d_status = 0;
++
++	return 0;
++}
++
++static int gpu_set_maximum_outstanding_req(int val)
++{
++	volatile unsigned int reg;
++
++	if(val > 0b1111)
++		return -1;
++
++	if (!pkbdev)
++		return -2;
++
++	if (!gpu_is_power_on())
++		return -3;
++
++	reg = kbase_os_reg_read(pkbdev, GPU_CONTROL_REG(L2_MMU_CONFIG));
++	reg &= ~(0b1111 << 24);
++	reg |= ((val & 0b1111) << 24);
++	kbase_os_reg_write(pkbdev, GPU_CONTROL_REG(L2_MMU_CONFIG), reg);
++
++	return 0;
++}
++
++int gpu_set_clock(struct exynos_context *platform, int freq)
++{
++	long g3d_rate_prev = -1;
++	unsigned long g3d_rate = freq * MHZ;
++	int ret = 0;
++
++	if (platform->aclk_g3d == 0)
++		return -ENODEV;
++
++#ifdef KBASE_PM_RUNTIME
++	if (platform->exynos_pm_domain)
++		mutex_lock(&platform->exynos_pm_domain->access_lock);
++#endif /* KBASE_PM_RUNTIME */
++
++	if (!gpu_is_power_on()) {
++		ret = -1;
++		GPU_LOG(DVFS_WARNING, "gpu_set_clk_vol in the G3D power-off state!\n");
++		goto err;
++	}
++
++	if (!gpu_is_clock_on(platform)) {
++		ret = -1;
++		GPU_LOG(DVFS_WARNING, "gpu_set_clk_vol in the G3D clock-off state!\n");
++		goto err;
++	}
++
++	g3d_rate_prev = clk_get_rate(platform->fout_g3d_pll);
++
++	/* if changed the VPLL rate, set rate for VPLL and wait for lock time */
++	if (g3d_rate != g3d_rate_prev) {
++		ret = gpu_set_maximum_outstanding_req(L2CONFIG_MO_1BY8);
++		if ( ret < 0)
++			GPU_LOG(DVFS_ERROR, "failed to set MO (%d)\n", ret);
++
++		/*change here for future stable clock changing*/
++		ret = clk_set_parent(platform->mout_g3d_pll, platform->fin_pll);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_parent [mout_g3d_pll]\n");
++			goto err;
++		}
++
++		/*change g3d pll*/
++		ret = clk_set_rate(platform->fout_g3d_pll, g3d_rate);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_rate [fout_g3d_pll]\n");
++			goto err;
++		}
++
++		/*restore parent*/
++		ret = clk_set_parent(platform->mout_g3d_pll, platform->fout_g3d_pll);
++		if (ret < 0) {
++			GPU_LOG(DVFS_ERROR, "failed to clk_set_parent [mout_g3d_pll]\n");
++			goto err;
++		}
++
++		ret = gpu_set_maximum_outstanding_req(L2CONFIG_MO_NO_RESTRICT);
++		if ( ret < 0)
++			GPU_LOG(DVFS_ERROR, "failed to restore MO (%d)\n", ret);
++
++		g3d_rate_prev = g3d_rate;
++	}
++
++	gpu_update_clock(platform);
++	GPU_LOG(DVFS_DEBUG, "[G3D] clock set: %ld\n", g3d_rate / MHZ);
++	GPU_LOG(DVFS_DEBUG, "[G3D] clock get: %d\n", platform->cur_clock);
++err:
++#ifdef KBASE_PM_RUNTIME
++	if (platform->exynos_pm_domain)
++		mutex_unlock(&platform->exynos_pm_domain->access_lock);
++#endif /* KBASE_PM_RUNTIME */
++	return ret;
++}
++
++static int gpu_get_clock(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	KBASE_DEBUG_ASSERT(kbdev != NULL);
++
++	platform->fin_pll = clk_get(kbdev->dev, "fin_pll");
++	if (IS_ERR(platform->fin_pll)  || (platform->fin_pll == NULL)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [fin_pll]\n");
++		return PTR_ERR(platform->fin_pll);
++	}
++
++	platform->fout_g3d_pll = clk_get(NULL, "fout_g3d_pll");
++	if (IS_ERR(platform->fout_g3d_pll)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [fout_g3d_pll]\n");
++		return PTR_ERR(platform->fout_g3d_pll);
++	}
++
++	platform->aclk_g3d = clk_get(kbdev->dev, "aclk_g3d");
++	if (IS_ERR(platform->aclk_g3d)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [aclk_g3d]\n");
++		return PTR_ERR(platform->aclk_g3d);
++	}
++
++	platform->dout_aclk_g3d = clk_get(kbdev->dev, "dout_aclk_g3d");
++	if (IS_ERR(platform->dout_aclk_g3d)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [dout_aclk_g3d]\n");
++		return PTR_ERR(platform->dout_aclk_g3d);
++	}
++
++	platform->mout_g3d_pll = clk_get(kbdev->dev, "mout_g3d_pll");
++	if (IS_ERR(platform->mout_g3d_pll)) {
++		GPU_LOG(DVFS_ERROR, "failed to clk_get [mout_g3d_pll]\n");
++		return PTR_ERR(platform->mout_g3d_pll);
++	}
++
++	return 0;
++}
++
++int gpu_clock_init(struct kbase_device *kbdev)
++{
++	int ret;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	KBASE_DEBUG_ASSERT(kbdev != NULL);
++
++	ret = gpu_get_clock(kbdev);
++	if (ret < 0)
++		return ret;
++
++	GPU_LOG(DVFS_INFO, "g3d clock initialized\n");
++
++	return 0;
++}
++
++static int gpu_update_voltage(struct exynos_context *platform)
++{
++#ifdef CONFIG_REGULATOR
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	platform->cur_voltage = regulator_get_voltage(platform->g3d_regulator);
++#endif /* CONFIG_REGULATOR */
++	return 0;
++}
++
++int gpu_set_voltage(struct exynos_context *platform, int vol)
++{
++	static int _vol = -1;
++
++	if (_vol == vol)
++		return 0;
++
++#ifdef CONFIG_REGULATOR
++	int err;
++
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_set_voltage(platform->g3d_regulator, vol, vol);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to set voltage, voltage: %d (err %d)\n",
++				vol, err);
++		return err;
++	}
++#endif /* CONFIG_REGULATOR */
++
++	_vol = vol;
++
++	gpu_update_voltage(platform);
++	GPU_LOG(DVFS_DEBUG, "[G3D] voltage set:%d\n", vol);
++	GPU_LOG(DVFS_DEBUG, "[G3D] voltage get:%d\n", platform->cur_voltage);
++
++	return 0;
++}
++
++#ifdef CONFIG_REGULATOR
++int gpu_regulator_enable(struct exynos_context *platform)
++{
++	int err;
++
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_enable(platform->g3d_regulator);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to enable g3d regulator (err %d)\n",
++				err);
++		return err;
++	}
++	return 0;
++}
++
++int gpu_regulator_disable(struct exynos_context *platform)
++{
++	int err;
++
++	if (!platform->g3d_regulator) {
++		GPU_LOG(DVFS_ERROR, "g3d_regulator is not initialized\n");
++		return -ENODEV;
++	}
++
++	err = regulator_disable(platform->g3d_regulator);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to disable g3d regulator (err %d)\n",
++				err);
++		return err;
++	}
++	return 0;
++}
++
++int gpu_regulator_init(struct exynos_context *platform)
++{
++	int gpu_voltage = 0;
++	int err;
++
++	platform->g3d_regulator = regulator_get(NULL, "vdd_g3d");
++	if (IS_ERR(platform->g3d_regulator)) {
++		err = PTR_ERR(platform->g3d_regulator);
++		GPU_LOG(DVFS_ERROR, "failed to obtain g3d regulator (err %d)\n",
++				err);
++		platform->g3d_regulator = NULL;
++		return err;
++	}
++
++	err = gpu_regulator_enable(platform);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to enable g3d regulator (err %d)\n",
++				err);
++		platform->g3d_regulator = NULL;
++		return err;
++	}
++
++	gpu_voltage = get_match_volt(ID_G3D, MALI_DVFS_BL_CONFIG_FREQ*1000);
++	if (gpu_voltage == 0)
++		gpu_voltage = GPU_DEFAULT_VOLTAGE;
++
++	err = gpu_set_voltage(platform, gpu_voltage);
++	if (err) {
++		GPU_LOG(DVFS_ERROR, "failed to set g3d regulator operating voltage [%d] (err %d)\n",
++				gpu_voltage, err);
++		return err;
++	}
++
++	GPU_LOG(DVFS_INFO, "g3d regulator initialized\n");
++
++	return 0;
++}
++#endif /* CONFIG_REGULATOR */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.c
+new file mode 100644
+index 0000000..dda1b81
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.c
+@@ -0,0 +1,1053 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_custom_interface.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/fb.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_control.h"
++#ifdef CONFIG_CPU_THERMAL_IPA
++#include "gpu_ipa.h"
++#endif /* CONFIG_CPU_THERMAL_IPA */
++#include "gpu_custom_interface.h"
++
++static int gpu_get_asv_table(struct kbase_device *kbdev, char *buf, size_t buf_size)
++{
++	int i, cnt = 0;
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (buf == NULL)
++		return 0;
++
++	cnt += snprintf(buf+cnt, buf_size-cnt, "GPU, vol, min, max, down_stay, mif, int, cpu\n");
++
++	for (i = platform->table_size-1; i >= 0; i--) {
++		cnt += snprintf(buf+cnt, buf_size-cnt, "%d, %7d, %2d, %3d, %d, %6d, %6d, %7d\n",
++		platform->table[i].clock, platform->table[i].voltage, platform->table[i].min_threshold,
++		platform->table[i].max_threshold, platform->table[i].stay_count, platform->table[i].mem_freq,
++		platform->table[i].int_freq, platform->table[i].cpu_freq);
++	}
++
++	return cnt;
++}
++
++static int gpu_get_dvfs_table(struct kbase_device *kbdev, char *buf, size_t buf_size)
++{
++	int i, cnt = 0;
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (buf == NULL)
++		return 0;
++
++	for (i = platform->table_size-1; i >= 0; i--) {
++		cnt += snprintf(buf+cnt, buf_size-cnt, " %d", platform->table[i].clock);
++	}
++	cnt += snprintf(buf+cnt, buf_size-cnt, "\n");
++
++	return cnt;
++}
++
++static ssize_t show_time_in_state(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	int i;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (gpu_control_state_set(kbdev, GPU_CONTROL_IS_POWER_ON, 0))
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_UPDATE_TIME_IN_STATE, platform->cur_clock);
++	else
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_UPDATE_TIME_IN_STATE, 0);
++
++	for (i = platform->table_size - 1; i >= 0; i--) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d %llu\n",
++				platform->table[i].clock,
++				platform->table[i].time);
++	}
++
++	if (ret >= PAGE_SIZE - 1) {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_time_in_state(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_INIT_TIME_IN_STATE, 0);
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	ssize_t ret = 0;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->cur_clock);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	unsigned int freq = 0;
++	int ret;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret = kstrtoint(buf, 0, &freq);
++	if (ret) {
++		GPU_LOG(DVFS_WARNING, "set_clock: invalid value\n");
++		return -ENOENT;
++	}
++
++	gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, freq);
++
++	return count;
++}
++
++static ssize_t show_fbdev(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev;
++	ssize_t ret = 0;
++	int i;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	for (i = 0; i < num_registered_fb; i++)
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "fb[%d] xres=%d, yres=%d, addr=0x%lx\n", i, registered_fb[i]->var.xres, registered_fb[i]->var.yres, registered_fb[i]->fix.smem_start);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t show_vol(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	ssize_t ret = 0;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->cur_voltage);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t show_utilization(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->utilization);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->dvfs_status);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	if (sysfs_streq("0", buf))
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_OFF, 0);
++	else if (sysfs_streq("1", buf))
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_ON, 0);
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_asv_table(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev;
++	ssize_t ret = 0;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	ret += gpu_get_asv_table(kbdev, buf+ret, (size_t)PAGE_SIZE-ret);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t show_dvfs_table(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev;
++	ssize_t ret = 0;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	ret += gpu_get_dvfs_table(kbdev, buf+ret, (size_t)PAGE_SIZE-ret);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t show_max_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	unsigned long flags;
++	int locked_clock = -1;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	locked_clock = platform->max_lock;
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++	if (locked_clock > 0)
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", locked_clock);
++	else
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "-1");
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_max_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	int ret, clock = 0;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (sysfs_streq("0", buf)) {
++		platform->target_lock_type = SYSFS_LOCK;
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_UNLOCK, 0);
++	} else {
++		ret = kstrtoint(buf, 0, &clock);
++		if (ret) {
++			GPU_LOG(DVFS_WARNING, "set_clock: invalid value\n");
++			return -ENOENT;
++		}
++
++		ret = gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_GET_LEVEL, clock);
++		if ((ret < 0) || (ret > platform->table_size - 1)) {
++			GPU_LOG(DVFS_WARNING, "set_clock: invalid value\n");
++			return -ENOENT;
++		}
++
++		if (clock == platform->table[platform->table_size-1].clock) {
++			platform->target_lock_type = SYSFS_LOCK;
++			gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_UNLOCK, 0);
++		} else {
++			platform->target_lock_type = SYSFS_LOCK;
++			gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_LOCK, clock);
++		}
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_min_lock_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	unsigned long flags;
++	int locked_clock = -1;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	locked_clock = platform->min_lock;
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++	if (locked_clock > 0)
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", locked_clock);
++	else
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "-1");
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_min_lock_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	int ret, clock = 0;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (sysfs_streq("0", buf)) {
++		platform->target_lock_type = SYSFS_LOCK;
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MIN_UNLOCK, 0);
++	} else {
++		ret = kstrtoint(buf, 0, &clock);
++		if (ret) {
++			GPU_LOG(DVFS_WARNING, "set_clock: invalid value\n");
++			return -ENOENT;
++		}
++
++		ret = gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_GET_LEVEL, clock);
++		if ((ret < 0) || (ret > platform->table_size - 1)) {
++			GPU_LOG(DVFS_WARNING, "set_clock: invalid value\n");
++			return -ENOENT;
++		}
++
++		if (clock == platform->table[0].clock) {
++			platform->target_lock_type = SYSFS_LOCK;
++			gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MIN_UNLOCK, 0);
++		} else {
++			platform->target_lock_type = SYSFS_LOCK;
++			gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MIN_LOCK, clock);
++		}
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_tmu(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev = dev_get_drvdata(dev);
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (platform->tmu_status)
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "1");
++	else
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "0");
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_tmu_control(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev = dev_get_drvdata(dev);
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (sysfs_streq("0", buf)) {
++		if (platform->voltage_margin != 0) {
++			platform->voltage_margin = 0;
++			gpu_control_state_set(kbdev, GPU_CONTROL_SET_MARGIN, 0);
++		}
++		platform->target_lock_type = TMU_LOCK;
++		gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_UNLOCK, 0);
++		platform->tmu_status = false;
++	} else if (sysfs_streq("1", buf))
++		platform->tmu_status = true;
++	else
++		GPU_LOG(DVFS_WARNING, "invalid val -only [0 or 1] is accepted\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_power_state(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct kbase_device *kbdev = dev_get_drvdata(dev);
++	ssize_t ret = 0;
++
++	if (gpu_control_state_set(kbdev, GPU_CONTROL_IS_POWER_ON, 0) > 0)
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "1");
++	else
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "0");
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t show_governor(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "[List]\n%s[Current Governor] %d",
++				platform->governor_list, platform->governor_type);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_governor(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	int ret;
++	int next_governor_type;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret = kstrtoint(buf, 0, &next_governor_type);
++
++	if ((next_governor_type < 0) && (next_governor_type >= platform->governor_num)) {
++		GPU_LOG(DVFS_WARNING, "set_governor: invalid value\n");
++		return -ENOENT;
++	}
++
++	ret = gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_GOVERNOR_CHANGE, next_governor_type);
++
++	if (ret < 0) {
++		GPU_LOG(DVFS_WARNING, "set_governor: fail to set the new governor\n");
++		return -ENOENT;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_wakeup_lock(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->wakeup_lock);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_wakeup_lock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (sysfs_streq("0", buf))
++		platform->wakeup_lock = false;
++	else if (sysfs_streq("1", buf))
++		platform->wakeup_lock = true;
++	else
++		GPU_LOG(DVFS_WARNING, "invalid val -only [0 or 1] is accepted\n");
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++static ssize_t show_debug_level(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", gpu_get_debug_level());
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++
++	return ret;
++}
++
++static ssize_t set_debug_level(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	int debug_level, ret;
++
++	ret = kstrtoint(buf, 0, &debug_level);
++	if (ret) {
++		GPU_LOG(DVFS_WARNING, "set_debug_level: invalid value\n");
++		return -ENOENT;
++	}
++
++	if ((debug_level < 0) || (debug_level > DVFS_DEBUG_END)) {
++		GPU_LOG(DVFS_WARNING, "set_debug_level: invalid value\n");
++		return -ENOENT;
++	}
++
++	gpu_set_debug_level(debug_level);
++
++	return count;
++}
++
++static ssize_t show_polling_speed(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++
++	kbdev = dev_get_drvdata(dev);
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", platform->polling_speed);
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not see\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return ret;
++}
++
++static ssize_t set_polling_speed(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct kbase_device *kbdev;
++	struct exynos_context *platform;
++	int ret, polling_speed;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	ret = kstrtoint(buf, 0, &polling_speed);
++
++	if ((polling_speed < 100) || (polling_speed > 1000)) {
++		GPU_LOG(DVFS_WARNING, "set_polling_speed: invalid value\n");
++		return -ENOENT;
++	}
++
++	platform->polling_speed = polling_speed;
++
++	if (ret < 0) {
++		GPU_LOG(DVFS_WARNING, "set_polling_speed: fail to set the new governor\n");
++		return -ENOENT;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "G3D DVFS build config is disabled. You can not set\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return count;
++}
++
++#ifdef CONFIG_CPU_THERMAL_IPA
++static ssize_t show_norm_utilization(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_EXYNOS_THERMAL
++	struct kbase_device *kbdev;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "%d", gpu_ipa_dvfs_get_norm_utilisation(kbdev));
++#else
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "-1");
++#endif
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "EXYNOS THERMAL build config is disabled. You can not set\n");
++#endif
++
++	return ret;
++}
++
++static ssize_t show_utilization_stats(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	ssize_t ret = 0;
++#ifdef CONFIG_EXYNOS_THERMAL
++	struct kbase_device *kbdev;
++	struct mali_debug_utilisation_stats stats;
++
++	kbdev = dev_get_drvdata(dev);
++
++	if (!kbdev)
++		return -ENODEV;
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_ipa_dvfs_get_utilisation_stats(&stats);
++
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "util=%d norm_util=%d norm_freq=%d time_busy=%u time_idle=%u time_tick=%d util_gl_share=%d util_cl_0_share=%d util_cl_1_share=%d",
++				stats.s.utilisation, stats.s.norm_utilisation,
++				stats.s.freq_for_norm,
++				stats.time_busy,
++				stats.time_idle,
++				stats.time_tick,
++				stats.s.util_gl_share,
++				stats.s.util_cl_share[0],
++				stats.s.util_cl_share[1]);
++#else
++	ret += snprintf(buf+ret, PAGE_SIZE-ret, "-1");
++#endif
++
++	if (ret < PAGE_SIZE - 1) {
++		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
++	} else {
++		buf[PAGE_SIZE-2] = '\n';
++		buf[PAGE_SIZE-1] = '\0';
++		ret = PAGE_SIZE-1;
++	}
++#else
++	GPU_LOG(DVFS_WARNING, "EXYNOS THERMAL build config is disabled. You can not set\n");
++#endif
++
++	return ret;
++}
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++/** The sysfs file @c clock, fbdev.
++ *
++ * This is used for obtaining information about the mali t6xx operating clock & framebuffer address,
++ */
++
++static DEVICE_ATTR(clock, S_IRUGO|S_IWUSR, show_clock, set_clock);
++static DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
++static DEVICE_ATTR(vol, S_IRUGO, show_vol, NULL);
++static DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
++static DEVICE_ATTR(dvfs_max_lock, S_IRUGO|S_IWUSR,
++		show_max_lock_dvfs, set_max_lock_dvfs);
++static DEVICE_ATTR(dvfs_min_lock, S_IRUGO|S_IWUSR,
++		show_min_lock_dvfs, set_min_lock_dvfs);
++static DEVICE_ATTR(time_in_state, S_IRUGO|S_IWUSR,
++		show_time_in_state, set_time_in_state);
++static DEVICE_ATTR(tmu, S_IRUGO|S_IWUSR, show_tmu, set_tmu_control);
++static DEVICE_ATTR(utilization, S_IRUGO, show_utilization, NULL);
++#ifdef CONFIG_CPU_THERMAL_IPA
++static DEVICE_ATTR(norm_utilization, S_IRUGO, show_norm_utilization, NULL);
++static DEVICE_ATTR(utilization_stats, S_IRUGO, show_utilization_stats, NULL);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++static DEVICE_ATTR(asv_table, S_IRUGO, show_asv_table, NULL);
++static DEVICE_ATTR(dvfs_table, S_IRUGO, show_dvfs_table, NULL);
++static DEVICE_ATTR(power_state, S_IRUGO, show_power_state, NULL);
++static DEVICE_ATTR(dvfs_governor, S_IRUGO|S_IWUSR, show_governor, set_governor);
++static DEVICE_ATTR(wakeup_lock, S_IRUGO|S_IWUSR,
++		show_wakeup_lock, set_wakeup_lock);
++static DEVICE_ATTR(debug_level, S_IRUGO|S_IWUSR,
++		show_debug_level, set_debug_level);
++static DEVICE_ATTR(polling_speed, S_IRUGO|S_IWUSR,
++		show_polling_speed, set_polling_speed);
++
++int gpu_create_sysfs_file(struct device *dev)
++{
++	if (device_create_file(dev, &dev_attr_clock)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [clock]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_fbdev)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [fbdev]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_vol)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [vol]\n");
++	goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_dvfs)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [dvfs]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_dvfs_max_lock)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [dvfs_max_lock]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_dvfs_min_lock)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [dvfs_min_lock]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_time_in_state)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [time_in_state]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_tmu)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [tmu]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_utilization)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [utilization]\n");
++		goto out;
++	}
++#ifdef CONFIG_CPU_THERMAL_IPA
++	if (device_create_file(dev, &dev_attr_norm_utilization)) {
++		dev_err(dev, "Couldn't create sysfs file [norm_utilization]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_utilization_stats)) {
++		dev_err(dev, "Couldn't create sysfs file [utilization_stats]\n");
++		goto out;
++	}
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	if (device_create_file(dev, &dev_attr_asv_table)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [asv_table]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_dvfs_table)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [dvfs_table]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_power_state)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [power_state]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_dvfs_governor)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [dvfs_governor]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_wakeup_lock)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [wakeup_lock]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_debug_level)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [debug_level]\n");
++		goto out;
++	}
++
++	if (device_create_file(dev, &dev_attr_polling_speed)) {
++		GPU_LOG(DVFS_ERROR, "Couldn't create sysfs file [polling_speed]\n");
++		goto out;
++	}
++
++	return 0;
++out:
++	return -ENOENT;
++}
++
++void gpu_remove_sysfs_file(struct device *dev)
++{
++	device_remove_file(dev, &dev_attr_clock);
++	device_remove_file(dev, &dev_attr_fbdev);
++	device_remove_file(dev, &dev_attr_vol);
++	device_remove_file(dev, &dev_attr_dvfs);
++	device_remove_file(dev, &dev_attr_dvfs_max_lock);
++	device_remove_file(dev, &dev_attr_dvfs_min_lock);
++	device_remove_file(dev, &dev_attr_time_in_state);
++	device_remove_file(dev, &dev_attr_tmu);
++	device_remove_file(dev, &dev_attr_utilization);
++#ifdef CONFIG_CPU_THERMAL_IPA
++	device_remove_file(dev, &dev_attr_norm_utilization);
++	device_remove_file(dev, &dev_attr_utilization_stats);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	device_remove_file(dev, &dev_attr_asv_table);
++	device_remove_file(dev, &dev_attr_dvfs_table);
++	device_remove_file(dev, &dev_attr_power_state);
++	device_remove_file(dev, &dev_attr_dvfs_governor);
++	device_remove_file(dev, &dev_attr_wakeup_lock);
++	device_remove_file(dev, &dev_attr_debug_level);
++	device_remove_file(dev, &dev_attr_polling_speed);
++}
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.h
+new file mode 100644
+index 0000000..a45bc30
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_custom_interface.h
+@@ -0,0 +1,23 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_custom_interface.h
++ * DVFS
++ */
++
++#ifndef _GPU_CUSTOM_INTERFACE_H_
++#define _GPU_CUSTOM_INTERFACE_H_
++
++int gpu_create_sysfs_file(struct device *dev);
++void gpu_remove_sysfs_file(struct device *dev);
++
++#endif /* _GPU_CUSTOM_INTERFACE_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.c
+new file mode 100644
+index 0000000..f59d15f
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.c
+@@ -0,0 +1,371 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_dvfs_governor.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/io.h>
++#include <linux/pm_qos.h>
++#include <mach/asv-exynos.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_dvfs_governor.h"
++#include "gpu_control.h"
++#ifdef CONFIG_CPU_THERMAL_IPA
++#include "gpu_ipa.h"
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++typedef void (*GET_NEXT_FREQ)(struct kbase_device *kbdev, int utilization);
++GET_NEXT_FREQ gpu_dvfs_get_next_freq;
++
++static char *governor_list[G3D_MAX_GOVERNOR_NUM] = {"Default", "Static", "Booster"};
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++#define GPU_DVFS_TABLE_SIZE(X)  ARRAY_SIZE(X)
++#define CPU_MAX PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE
++
++static gpu_dvfs_info gpu_dvfs_infotbl_default[] = {
++/*  vol,clk,min,max,down stay, pm_qos mem, pm_qos int, pm_qos cpu_kfc_min, pm_qos cpu_egl_max */
++#if SOC_NAME == 5422
++	{812500,  177,  0,  90, 2, 0, 275000, 222000,       0, CPU_MAX},
++	{862500,  266, 60,  90, 1, 0, 413000, 222000,       0, CPU_MAX},
++	{912500,  350, 70,  90, 1, 0, 728000, 333000,       0, CPU_MAX},
++	{962500,  420, 78,  90, 1, 0, 825000, 400000,       0, CPU_MAX},
++	{1000000, 480, 90,  99, 1, 0, 825000, 400000, 1000000, 1600000},
++#ifdef CONFIG_SOC_EXYNOS5422_REV_0
++	{1037500, 543, 99, 100, 1, 0, 825000, 400000, 1000000, 1600000},
++#else
++	{1037500, 533, 99, 100, 1, 0, 825000, 400000, 1000000, 1600000},
++#endif /* CONFIG_SOC_EXYNOS5422_REV_0 */
++#elif SOC_NAME == 5430
++	{1000000, 160,  0,  90, 3, 0, 275000, 160000,  500000, CPU_MAX},
++	{1000000, 266, 54,  90, 3, 0, 275000, 160000,  500000, CPU_MAX},
++	{1025000, 350, 60,  90, 3, 0, 413000, 200000,  500000, CPU_MAX},
++	{1025000, 420, 70, 100, 2, 0, 543000, 267000,  900000, CPU_MAX},
++	{1075000, 500, 78, 100, 1, 0, 633000, 317000, 1500000, CPU_MAX},
++	{1125000, 550, 78, 100, 1, 0, 825000, 413000, 1500000, CPU_MAX},
++	{1150000, 600, 78, 100, 1, 0, 825000, 413000, 1500000, CPU_MAX},
++#elif SOC_NAME == 5260
++	{900000,  160,  0,  90, 3, 0, 103000, 100000,       0, CPU_MAX},
++	{900000,  266, 53,  90, 3, 0, 138000, 100000,       0, CPU_MAX},
++	{950000,  350, 60,  90, 3, 0, 206000, 160000,       0, CPU_MAX},
++	{1000000, 450, 70,  90, 2, 0, 275000, 160000,       0, CPU_MAX},
++	{1075000, 560, 78, 100, 1, 0, 413000, 266000, 1000000, CPU_MAX},
++	{1175000, 667, 98, 100, 1, 0, 543000, 266000, 1000000, CPU_MAX},
++#else
++#error SOC_NAME should be specified.
++#endif
++};
++
++
++#ifdef CONFIG_DYNIMIC_ABB
++static int gpu_abb_infobl_default[] = {900000, 900000, 950000, 1000000, 1075000, 1175000};
++#endif /* SOC_NAME */
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++static int gpu_dvfs_governor_default(struct kbase_device *kbdev, int utilization)
++{
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if ((platform->step < platform->table_size-1) &&
++			(utilization > platform->table[platform->step].max_threshold)) {
++		platform->step++;
++		platform->down_requirement = platform->table[platform->step].stay_count;
++		DVFS_ASSERT(platform->step < platform->table_size);
++	} else if ((platform->step > 0) && (utilization < platform->table[platform->step].min_threshold)) {
++		DVFS_ASSERT(platform->step > 0);
++		platform->down_requirement--;
++		if (platform->down_requirement == 0) {
++			platform->step--;
++			platform->down_requirement = platform->table[platform->step].stay_count;
++		}
++	} else {
++		platform->down_requirement = platform->table[platform->step].stay_count;
++	}
++
++	return 0;
++}
++
++static int gpu_dvfs_governor_static(struct kbase_device *kbdev, int utilization)
++{
++	struct exynos_context *platform;
++	static bool increase = true;
++	static int count;
++
++	platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (count == G3D_GOVERNOR_STATIC_PERIOD) {
++		if (increase) {
++			if (platform->step < platform->table_size-1)
++				platform->step++;
++			if (((platform->max_lock > 0) && (platform->table[platform->step].clock == platform->max_lock))
++					|| (platform->step == platform->table_size-1))
++				increase = false;
++		} else {
++			if (platform->step > 0)
++				platform->step--;
++			if (((platform->min_lock > 0) && (platform->table[platform->step].clock == platform->min_lock))
++					|| (platform->step == 0))
++				increase = true;
++		}
++
++		count = 0;
++	} else {
++		count++;
++	}
++
++	return 0;
++}
++
++static int gpu_dvfs_governor_booster(struct kbase_device *kbdev, int utilization)
++{
++	struct exynos_context *platform;
++	static int weight;
++	int cur_weight, booster_threshold, dvfs_table_lock, i;
++
++	platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	cur_weight = platform->cur_clock*utilization;
++	/* booster_threshold = current clock * set the percentage of utilization */
++	booster_threshold = platform->cur_clock * 50;
++
++	dvfs_table_lock = platform->table_size-1;
++	for (i = platform->table_size-1; i >= 0; i--)
++		if (platform->table[i].max_threshold == 100)
++			dvfs_table_lock = i;
++
++	if ((platform->step < dvfs_table_lock-2) &&
++			((cur_weight - weight) > booster_threshold)) {
++		platform->step += 2;
++		platform->down_requirement = platform->table[platform->step].stay_count;
++		GPU_LOG(DVFS_WARNING, "[G3D_booster] increase G3D level 2 step\n");
++		DVFS_ASSERT(platform->step < platform->table_size);
++	} else if ((platform->step < platform->table_size-1) &&
++			(utilization > platform->table[platform->step].max_threshold)) {
++		platform->step++;
++		platform->down_requirement = platform->table[platform->step].stay_count;
++		DVFS_ASSERT(platform->step < platform->table_size);
++	} else if ((platform->step > 0) && (utilization < platform->table[platform->step].min_threshold)) {
++		DVFS_ASSERT(platform->step > 0);
++		platform->down_requirement--;
++		if (platform->down_requirement == 0) {
++			platform->step--;
++			platform->down_requirement = platform->table[platform->step].stay_count;
++		}
++	} else {
++		platform->down_requirement = platform->table[platform->step].stay_count;
++	}
++	weight = cur_weight;
++
++	return 0;
++}
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++static int gpu_dvfs_update_asv_table(struct exynos_context *platform, int governor_type)
++{
++	int i, voltage;
++#ifdef CONFIG_DYNIMIC_ABB
++	unsigned int asv_abb = 0;
++	for (i = 0; i < platform->table_size; i++) {
++		asv_abb = get_match_abb(ID_G3D, platform->table[i].clock*1000);
++		if (!asv_abb) {
++			platform->devfreq_g3d_asv_abb[i] = ABB_BYPASS;
++		} else {
++			platform->devfreq_g3d_asv_abb[i] = asv_abb;
++		}
++		GPU_LOG(DVFS_INFO, "DEVFREQ(G3D) : %uKhz, ABB %u\n", platform->table[i].clock*1000, platform->devfreq_g3d_asv_abb[i]);
++#else
++	for (i = 0; i < platform->table_size; i++) {
++#endif
++		voltage = get_match_volt(ID_G3D, platform->table[i].clock*1000);
++		if (voltage > 0)
++			platform->table[i].voltage = voltage;
++		GPU_LOG(DVFS_INFO, "G3D %dKhz ASV is %duV\n", platform->table[i].clock*1000, platform->table[i].voltage);
++	}
++	return 0;
++}
++
++int gpu_dvfs_governor_init(struct kbase_device *kbdev, int governor_type)
++{
++	unsigned long flags;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	int i, total = 0;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	switch (governor_type) {
++	case G3D_DVFS_GOVERNOR_DEFAULT:
++		gpu_dvfs_get_next_freq = (GET_NEXT_FREQ)&gpu_dvfs_governor_default;
++		platform->table = gpu_dvfs_infotbl_default;
++		platform->table_size = GPU_DVFS_TABLE_SIZE(gpu_dvfs_infotbl_default);
++#ifdef CONFIG_DYNIMIC_ABB
++		platform->devfreq_g3d_asv_abb = gpu_abb_infobl_default;
++#endif
++		platform->step = gpu_dvfs_get_level(platform, G3D_GOVERNOR_DEFAULT_CLOCK_DEFAULT);
++		break;
++	case G3D_DVFS_GOVERNOR_STATIC:
++		gpu_dvfs_get_next_freq = (GET_NEXT_FREQ)&gpu_dvfs_governor_static;
++		platform->table = gpu_dvfs_infotbl_default;
++		platform->table_size = GPU_DVFS_TABLE_SIZE(gpu_dvfs_infotbl_default);
++#ifdef CONFIG_DYNIMIC_ABB
++		platform->devfreq_g3d_asv_abb = gpu_abb_infobl_default;
++#endif
++		platform->step = gpu_dvfs_get_level(platform, G3D_GOVERNOR_DEFAULT_CLOCK_STATIC);
++		break;
++	case G3D_DVFS_GOVERNOR_BOOSTER:
++		gpu_dvfs_get_next_freq = (GET_NEXT_FREQ)&gpu_dvfs_governor_booster;
++		platform->table = gpu_dvfs_infotbl_default;
++		platform->table_size = GPU_DVFS_TABLE_SIZE(gpu_dvfs_infotbl_default);
++#ifdef CONFIG_DYNIMIC_ABB
++		platform->devfreq_g3d_asv_abb = gpu_abb_infobl_default;
++#endif
++		platform->step = gpu_dvfs_get_level(platform, G3D_GOVERNOR_DEFAULT_CLOCK_BOOSTER);
++		break;
++	default:
++		GPU_LOG(DVFS_WARNING, "[gpu_dvfs_governor_init] invalid governor type\n");
++		gpu_dvfs_get_next_freq = (GET_NEXT_FREQ)&gpu_dvfs_governor_default;
++		platform->table = gpu_dvfs_infotbl_default;
++		platform->table_size = GPU_DVFS_TABLE_SIZE(gpu_dvfs_infotbl_default);
++#ifdef CONFIG_DYNIMIC_ABB
++		platform->devfreq_g3d_asv_abb = gpu_abb_infobl_default;
++#endif
++		platform->step = gpu_dvfs_get_level(platform, G3D_GOVERNOR_DEFAULT_CLOCK_DEFAULT);
++		break;
++	}
++
++	platform->utilization = 100;
++	platform->target_lock_type = -1;
++	platform->max_lock = 0;
++	platform->min_lock = 0;
++#ifdef CONFIG_CPU_THERMAL_IPA
++	gpu_ipa_dvfs_calc_norm_utilisation(kbdev);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	for (i = 0; i < NUMBER_LOCK; i++) {
++		platform->user_max_lock[i] = 0;
++		platform->user_min_lock[i] = 0;
++	}
++
++	platform->down_requirement = 1;
++	platform->wakeup_lock = 0;
++
++	platform->governor_type = governor_type;
++	platform->governor_num = G3D_MAX_GOVERNOR_NUM;
++
++	for (i = 0; i < G3D_MAX_GOVERNOR_NUM; i++)
++		total += snprintf(platform->governor_list+total,
++			sizeof(platform->governor_list), "[%d] %s\n", i, governor_list[i]);
++
++	gpu_dvfs_init_time_in_state(platform);
++#else
++	platform->table = gpu_dvfs_infotbl_default;
++	platform->table_size = GPU_DVFS_TABLE_SIZE(gpu_dvfs_infotbl_default);
++#ifdef CONFIG_DYNIMIC_ABB
++	platform->devfreq_g3d_asv_abb = gpu_abb_infobl_default;
++#endif /* SOC_NAME */
++	platform->step = gpu_dvfs_get_level(platform, MALI_DVFS_START_FREQ);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++	platform->cur_clock = platform->table[platform->step].clock;
++
++	/* asv info update */
++	gpu_dvfs_update_asv_table(platform, governor_type);
++
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++	return 1;
++}
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++int gpu_dvfs_init_time_in_state(struct exynos_context *platform)
++{
++	int i;
++
++	for (i = 0; i < platform->table_size; i++)
++		platform->table[i].time = 0;
++
++	return 0;
++}
++
++int gpu_dvfs_update_time_in_state(struct exynos_context *platform, int freq)
++{
++	u64 current_time;
++	static u64 prev_time;
++	int level = gpu_dvfs_get_level(platform, freq);
++
++	if (prev_time == 0)
++		prev_time = get_jiffies_64();
++
++	current_time = get_jiffies_64();
++	if ((level >= 0) && (level < platform->table_size))
++		platform->table[level].time += current_time-prev_time;
++
++	prev_time = current_time;
++
++	return 0;
++}
++
++int gpu_dvfs_decide_next_level(struct kbase_device *kbdev, int utilization)
++{
++	unsigned long flags;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	gpu_dvfs_get_next_freq(kbdev, utilization);
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++	return 0;
++}
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++int gpu_dvfs_get_level(struct exynos_context *platform, int freq)
++{
++	int i;
++
++	for (i = 0; i < platform->table_size; i++) {
++		if (platform->table[i].clock == freq)
++			return i;
++	}
++
++	return -1;
++}
++
++int gpu_dvfs_get_voltage(struct exynos_context *platform, int freq)
++{
++	int i;
++
++	for (i = 0; i < platform->table_size; i++) {
++		if (platform->table[i].clock == freq)
++			return platform->table[i].voltage;
++	}
++
++	return -1;
++}
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.h
+new file mode 100644
+index 0000000..cb68a24
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_governor.h
+@@ -0,0 +1,35 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_dvfs_governor.h
++ * DVFS
++ */
++
++#ifndef _GPU_DVFS_GOVERNOR_H_
++#define _GPU_DVFS_GOVERNOR_H_
++
++typedef enum {
++    G3D_DVFS_GOVERNOR_DEFAULT = 0,
++    G3D_DVFS_GOVERNOR_STATIC,
++    G3D_DVFS_GOVERNOR_BOOSTER,
++    G3D_MAX_GOVERNOR_NUM,
++} gpu_governor_type;
++
++int gpu_dvfs_governor_init(struct kbase_device *kbdev, int governor_type);
++int gpu_dvfs_decide_next_level(struct kbase_device *kbdev, int utilization);
++int gpu_dvfs_init_time_in_state(struct exynos_context *platform);
++int gpu_dvfs_update_time_in_state(struct exynos_context *platform, int freq);
++int gpu_dvfs_get_level(struct exynos_context *platform, int freq);
++int gpu_dvfs_get_voltage(struct exynos_context *platform, int freq);
++char *gpu_dvfs_get_governor_list(void);
++
++#endif /* _GPU_DVFS_GOVERNOR_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.c
+new file mode 100644
+index 0000000..5aabadf
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.c
+@@ -0,0 +1,424 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_dvfs_handler.c
++ * DVFS
++ */
++
++#include <mali_kbase.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_control.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_dvfs_governor.h"
++#ifdef CONFIG_CPU_THERMAL_IPA
++#include "gpu_ipa.h"
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++extern struct kbase_device *pkbdev;
++
++void ipa_mali_dvfs_requested(unsigned int freq);
++
++#ifdef CONFIG_CPU_THERMAL_IPA
++int gpu_dvfs_get_clock(int level)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	return platform->table[level].clock;
++}
++
++int gpu_dvfs_get_step(void)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform)
++		return -ENODEV;
++
++	return platform->table_size;
++}
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++static int gpu_get_target_freq(void)
++{
++	int freq;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_dvfs_decide_next_level(kbdev, platform->utilization);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++	freq = platform->table[platform->step].clock;
++
++#ifdef CONFIG_CPU_THERMAL_IPA
++	ipa_mali_dvfs_requested(freq);
++#endif
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	if ((platform->max_lock > 0) && (freq > platform->max_lock))
++		freq = platform->max_lock;
++	else if ((platform->min_lock > 0) && (freq < platform->min_lock))
++		freq = platform->min_lock;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++	return freq;
++}
++
++static int gpu_set_target_freq(int freq)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, freq);
++
++	return 0;
++}
++
++static void gpu_dvfs_event_proc(struct work_struct *q)
++{
++	int freq = 0;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return;
++
++	mutex_lock(&platform->gpu_dvfs_handler_lock);
++	if (gpu_control_state_set(kbdev, GPU_CONTROL_IS_POWER_ON, 0)) {
++		freq = gpu_get_target_freq();
++		gpu_set_target_freq(freq);
++	}
++	mutex_unlock(&platform->gpu_dvfs_handler_lock);
++}
++static DECLARE_WORK(gpu_dvfs_work, gpu_dvfs_event_proc);
++
++int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation,
++	u32 util_gl_share, u32 util_cl_share[2])
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	unsigned long flags;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++    struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context is not initialized\n");
++		return -ENODEV;
++	}
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++#ifdef CONFIG_CPU_THERMAL_IPA
++	if (platform->time_tick < GPU_DVFS_TIME_INTERVAL) {
++		platform->time_tick++;
++		platform->time_busy += kbdev->pm.backend.metrics.time_busy;
++		platform->time_idle += kbdev->pm.backend.metrics.time_idle;
++	} else {
++		platform->time_busy = kbdev->pm.backend.metrics.time_busy;
++		platform->time_idle = kbdev->pm.backend.metrics.time_idle;
++		platform->time_tick = 0;
++	}
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++	platform->utilization = utilisation;
++	platform->util_cl_share[0] = util_cl_share[0];
++	platform->util_cl_share[1] = util_cl_share[1];
++	platform->util_gl_share = util_gl_share;
++#ifdef CONFIG_CPU_THERMAL_IPA
++	gpu_ipa_dvfs_calc_norm_utilisation(kbdev);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++#if defined(SLSI_INTEGRATION) && defined(CL_UTILIZATION_BOOST_BY_TIME_WEIGHT)
++	atomic_set(&kbdev->pm.backend.metrics.time_compute_jobs, 0);
++	atomic_set(&kbdev->pm.backend.metrics.time_vertex_jobs, 0);
++	atomic_set(&kbdev->pm.backend.metrics.time_fragment_jobs, 0);
++#endif
++
++	if (platform->dvfs_wq)
++		queue_work_on(0, platform->dvfs_wq, &gpu_dvfs_work);
++
++	GPU_LOG(DVFS_DEBUG, "[G3D] dvfs hanlder is called\n");
++
++	return 0;
++}
++
++int gpu_dvfs_handler_init(struct kbase_device *kbdev)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (!platform->dvfs_wq)
++		platform->dvfs_wq = create_singlethread_workqueue("g3d_dvfs");
++
++	if (!platform->dvfs_status)
++		platform->dvfs_status = true;
++#ifdef CONFIG_CPU_THERMAL_IPA
++	platform->time_tick = 0;
++	platform->time_busy = 0;
++	platform->time_idle = 0;
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++	GPU_LOG(DVFS_INFO, "g3d dvfs handler initialized\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return 0;
++}
++
++int gpu_dvfs_handler_deinit(struct kbase_device *kbdev)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (platform->dvfs_wq)
++		destroy_workqueue(platform->dvfs_wq);
++	platform->dvfs_wq = NULL;
++
++	if (platform->dvfs_status)
++		platform->dvfs_status = false;
++
++	GPU_LOG(DVFS_INFO, "g3d dvfs handler de-initialized\n");
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return 0;
++}
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++static int gpu_dvfs_on_off(struct kbase_device *kbdev, bool enable)
++{
++	unsigned long flags;
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (enable && !platform->dvfs_status) {
++		platform->dvfs_status = true;
++		gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, platform->cur_clock);
++		gpu_dvfs_handler_init(kbdev);
++		if (!kbdev->pm.backend.metrics.timer_active) {
++			spin_lock_irqsave(&kbdev->pm.backend.metrics.lock,
++									flags);
++			kbdev->pm.backend.metrics.timer_active = true;
++			spin_unlock_irqrestore(&kbdev->pm.backend.metrics.lock,
++									flags);
++			hrtimer_start(&kbdev->pm.backend.metrics.timer,
++				HR_TIMER_DELAY_MSEC(platform->polling_speed),
++							HRTIMER_MODE_REL);
++		}
++	} else if (!enable && platform->dvfs_status) {
++		platform->dvfs_status = false;
++		gpu_dvfs_handler_deinit(kbdev);
++		gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, MALI_DVFS_BL_CONFIG_FREQ);
++		if (kbdev->pm.backend.metrics.timer_active) {
++			spin_lock_irqsave(&kbdev->pm.backend.metrics.lock,
++									flags);
++			kbdev->pm.backend.metrics.timer_active = false;
++			spin_unlock_irqrestore(&kbdev->pm.backend.metrics.lock,
++									flags);
++			hrtimer_cancel(&kbdev->pm.backend.metrics.timer);
++		}
++	} else {
++		GPU_LOG(DVFS_WARNING, "impossible state to change dvfs status (current: %d, request: %d)\n",
++				platform->dvfs_status, enable);
++		return -1;
++	}
++	return 0;
++}
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++int gpu_dvfs_handler_control(struct kbase_device *kbdev, gpu_dvfs_handler_command command, int param)
++{
++	int ret = 0;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	int i;
++	bool dirty = false;
++	unsigned long flags;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	switch (command) {
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	case GPU_HANDLER_DVFS_ON:
++		mutex_lock(&platform->gpu_dvfs_handler_lock);
++		gpu_dvfs_on_off(kbdev, true);
++		mutex_unlock(&platform->gpu_dvfs_handler_lock);
++		break;
++	case GPU_HANDLER_DVFS_OFF:
++		mutex_lock(&platform->gpu_dvfs_handler_lock);
++		gpu_dvfs_on_off(kbdev, false);
++		mutex_unlock(&platform->gpu_dvfs_handler_lock);
++		break;
++	case GPU_HANDLER_DVFS_GOVERNOR_CHANGE:
++		mutex_lock(&platform->gpu_dvfs_handler_lock);
++		gpu_dvfs_on_off(kbdev, false);
++		gpu_dvfs_governor_init(kbdev, param);
++		gpu_dvfs_on_off(kbdev, true);
++		mutex_unlock(&platform->gpu_dvfs_handler_lock);
++		break;
++	case GPU_HANDLER_DVFS_MAX_LOCK:
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++		if ((platform->min_lock >= 0) && (param < platform->min_lock)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			GPU_LOG(DVFS_WARNING, "[G3D] max lock Error: lock is smaller than min lock\n");
++			return -1;
++		}
++
++		if ((platform->target_lock_type < TMU_LOCK) || (platform->target_lock_type >= NUMBER_LOCK)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			return -1;
++		}
++
++		platform->user_max_lock[platform->target_lock_type] = param;
++		platform->max_lock = param;
++
++		if (platform->max_lock > 0) {
++			for (i = 0; i < NUMBER_LOCK; i++) {
++				if (platform->user_max_lock[i] > 0)
++					platform->max_lock = MIN(platform->max_lock, platform->user_max_lock[i]);
++			}
++		} else {
++			platform->max_lock = param;
++		}
++
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++		if ((platform->max_lock > 0) && (platform->cur_clock > platform->max_lock))
++			gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, platform->max_lock);
++
++		GPU_LOG(DVFS_DEBUG, "[G3D] Lock max clk[%d], user lock[%d], current clk[%d]\n", platform->max_lock,
++				platform->user_min_lock[platform->target_lock_type], platform->cur_clock);
++
++		platform->target_lock_type = -1;
++		break;
++	case GPU_HANDLER_DVFS_MIN_LOCK:
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++		if ((platform->max_lock > 0) && (param > platform->max_lock)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			GPU_LOG(DVFS_WARNING, "min lock Error: the lock is larger than max lock\n");
++			return -1;
++		}
++
++		if ((platform->target_lock_type < TMU_LOCK) || (platform->target_lock_type >= NUMBER_LOCK)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			return -1;
++		}
++
++		platform->user_min_lock[platform->target_lock_type] = param;
++		platform->min_lock = param;
++
++		if (platform->min_lock > 0) {
++			for (i = 0; i < NUMBER_LOCK; i++) {
++				if (platform->user_min_lock[i] > 0)
++					platform->min_lock = MAX(platform->min_lock, platform->user_min_lock[i]);
++			}
++		} else {
++			platform->min_lock = param;
++		}
++
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++		if ((platform->min_lock > 0) && (platform->cur_clock < platform->min_lock))
++			gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, platform->min_lock);
++
++		GPU_LOG(DVFS_DEBUG, "[G3D] Lock min clk[%d], user lock[%d], current clk[%d]\n", platform->min_lock,
++				platform->user_min_lock[platform->target_lock_type], platform->cur_clock);
++
++		platform->target_lock_type = -1;
++		break;
++	case GPU_HANDLER_DVFS_MAX_UNLOCK:
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++
++		if ((platform->target_lock_type < TMU_LOCK) || (platform->target_lock_type >= NUMBER_LOCK)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			return -1;
++		}
++
++		platform->user_max_lock[platform->target_lock_type] = 0;
++		platform->max_lock = platform->table[platform->table_size-1].clock;
++
++		for (i = 0; i < NUMBER_LOCK; i++) {
++			if (platform->user_max_lock[i] > 0) {
++				dirty = true;
++				platform->max_lock = MIN(platform->user_max_lock[i], platform->max_lock);
++			}
++		}
++
++		if (!dirty)
++			platform->max_lock = 0;
++
++		platform->target_lock_type = -1;
++
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++		GPU_LOG(DVFS_DEBUG, "[G3D] Unlock max clk\n");
++		break;
++	case GPU_HANDLER_DVFS_MIN_UNLOCK:
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++
++		if ((platform->target_lock_type < TMU_LOCK) || (platform->target_lock_type >= NUMBER_LOCK)) {
++			spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++			return -1;
++		}
++
++		platform->user_min_lock[platform->target_lock_type] = 0;
++		platform->min_lock = platform->table[0].clock;
++
++		for (i = 0; i < NUMBER_LOCK; i++) {
++			if (platform->user_min_lock[i] > 0) {
++				dirty = true;
++				platform->min_lock = MAX(platform->user_min_lock[i], platform->min_lock);
++			}
++		}
++
++		if (!dirty)
++			platform->min_lock = 0;
++
++		platform->target_lock_type = -1;
++
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++		GPU_LOG(DVFS_DEBUG, "[G3D] Unlock min clk\n");
++		break;
++	case GPU_HANDLER_INIT_TIME_IN_STATE:
++		gpu_dvfs_init_time_in_state(platform);
++		break;
++	case GPU_HANDLER_UPDATE_TIME_IN_STATE:
++		gpu_dvfs_update_time_in_state(platform, param);
++		break;
++	case GPU_HANDLER_DVFS_GET_LEVEL:
++		ret = gpu_dvfs_get_level(platform, param);
++		break;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	case GPU_HANDLER_DVFS_GET_VOLTAGE:
++		ret = gpu_dvfs_get_voltage(platform, param);
++		break;
++	default:
++		break;
++	}
++	return ret;
++}
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.h
+new file mode 100644
+index 0000000..d9aaacc
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_dvfs_handler.h
+@@ -0,0 +1,49 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 DVFS driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_dvfs_handler.h
++ * DVFS
++ */
++
++#ifndef _GPU_DVFS_HANDLER_H_
++#define _GPU_DVFS_HANDLER_H_
++
++#define DVFS_ASSERT(x) \
++do { if (x) break; \
++	printk(KERN_EMERG "### ASSERTION FAILED %s: %s: %d: %s\n", __FILE__, __func__, __LINE__, #x); dump_stack(); \
++} while (0)
++
++typedef enum {
++	GPU_HANDLER_DVFS_ON = 0,
++	GPU_HANDLER_DVFS_OFF,
++	GPU_HANDLER_DVFS_GOVERNOR_CHANGE,
++	GPU_HANDLER_DVFS_MAX_LOCK,
++	GPU_HANDLER_DVFS_MIN_LOCK,
++	GPU_HANDLER_DVFS_MAX_UNLOCK,
++	GPU_HANDLER_DVFS_MIN_UNLOCK,
++	GPU_HANDLER_INIT_TIME_IN_STATE,
++	GPU_HANDLER_UPDATE_TIME_IN_STATE,
++	GPU_HANDLER_DVFS_GET_LEVEL,
++	GPU_HANDLER_DVFS_GET_VOLTAGE,
++} gpu_dvfs_handler_command;
++
++int kbase_platform_dvfs_event(struct kbase_device *kbdev, u32 utilisation,
++	u32 util_gl_share, u32 util_cl_share[2]);
++int gpu_dvfs_handler_init(struct kbase_device *kbdev);
++int gpu_dvfs_handler_deinit(struct kbase_device *kbdev);
++int gpu_dvfs_handler_control(struct kbase_device *kbdev, gpu_dvfs_handler_command command, int param);
++#ifdef CONFIG_CPU_THERMAL_IPA
++int gpu_dvfs_get_clock(int level);
++int gpu_dvfs_get_step(void);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++#endif /* _GPU_DVFS_HANDLER_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.c
+new file mode 100644
+index 0000000..25c2fec
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.c
+@@ -0,0 +1,249 @@
++#include "gpu_ipa.h"
++#include "gpu_dvfs_handler.h"
++
++#define CREATE_TRACE_POINTS
++#include "mali_power.h"
++#undef  CREATE_TRACE_POINTS
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++
++extern struct kbase_device *pkbdev;
++
++static void gpu_ipa_trace_utilisation(struct kbase_device *kbdev)
++{
++	int utilisation;
++	int norm_utilisation;
++	int freq_for_norm;
++
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return ;
++	}
++
++	lockdep_assert_held(&platform->gpu_dvfs_spinlock);
++
++	/* Can expand this to only trace when utilisation changed, to avoid too
++	 * much trace output and losing the part we're interested in */
++
++	utilisation = platform->utilization;
++	norm_utilisation = platform->norm_utilisation;
++	freq_for_norm = platform->freq_for_normalisation;
++
++	trace_mali_utilization_stats(utilisation, norm_utilisation, freq_for_norm);
++}
++
++static unsigned int gpu_ipa_dvfs_max_allowed_freq(struct kbase_device *kbdev)
++{
++	gpu_dvfs_info *dvfs_max_info;
++	int max_thermal_step = -1;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	int max_step;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return 0xffffffff;
++	}
++
++	max_step = platform->table_size-1;
++
++	/* Account for Throttling Lock */
++#ifdef CONFIG_EXYNOS_THERMAL
++	max_thermal_step = platform->table_size-1;
++#endif
++	if (max_thermal_step >= 0 && max_thermal_step < max_step)
++		max_step = max_thermal_step;
++
++	/* NOTE: This is the absolute maximum, not taking into account any tmu
++	 * throttling */
++	dvfs_max_info = &(platform->table[max_step]);
++	return dvfs_max_info->clock;
++}
++
++void gpu_ipa_dvfs_calc_norm_utilisation(struct kbase_device *kbdev)
++{
++	int cur_freq;
++	unsigned int cur_vol;
++	int max_freq;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	int cur_utilisation;
++	gpu_dvfs_info *dvfs_cur_info;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return ;
++	}
++
++	/* TODO:
++	 * - Other callers of kbase_platform_dvfs_set_level()
++	 */
++
++	lockdep_assert_held(&platform->gpu_dvfs_spinlock);
++
++	/* Get Current Op point */
++	/* This is before mali_dvfs_event_proc queued, so the dvfs 'step' is taken before we change frequency */
++	cur_utilisation = platform->utilization;
++	dvfs_cur_info = &(platform->table[platform->step]); /* dvfs_status under spinlock */
++	cur_freq = (int)dvfs_cur_info->clock;
++
++	cur_vol = dvfs_cur_info->voltage/10000;
++	/* Get Max Op point */
++	max_freq = gpu_ipa_dvfs_max_allowed_freq(kbdev);
++
++	/* Calculate */
++	platform->norm_utilisation = (cur_utilisation * cur_freq)/max_freq;
++	/* Store what frequency was used for normalization */
++	platform->freq_for_normalisation = cur_freq;
++	platform->power = div_u64((u64)POWER_COEFF_GPU * cur_freq * cur_vol * cur_vol, 100000);
++
++	gpu_ipa_trace_utilisation(kbdev);
++}
++
++int kbase_platform_dvfs_freq_to_power(int freq)
++{
++	int level;
++	unsigned int vol;
++	unsigned long flags;
++	unsigned long long power;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -1;
++	}
++
++	if (0 == freq) {
++		spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++		power = platform->power;
++		spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++	} else {
++		for (level = 0; level < platform->table_size; level++)
++			if (platform->table[level].clock == freq)
++				break;
++
++		if (level < platform->table_size) {
++			vol = platform->table[level].voltage / 10000;
++			power = div_u64((u64)POWER_COEFF_GPU * freq * vol * vol, 100000);
++		} else {
++			power = 0;
++		}
++	}
++
++	return (int)power;
++}
++
++int kbase_platform_dvfs_power_to_freq(int power)
++{
++	int level, freq;
++	unsigned int vol;
++	u64 _power;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -1;
++	}
++
++	for (level = 0; level < (platform->table_size - 1); level++) {
++		vol = platform->table[level].voltage / 10000;
++		freq = platform->table[level].clock;
++		_power = div_u64((u64)POWER_COEFF_GPU * freq * vol * vol, 100000);
++		if ((int)_power >= power)
++			break;
++	}
++
++	return platform->table[level].clock;
++}
++
++int gpu_ipa_dvfs_get_norm_utilisation(struct kbase_device *kbdev)
++{
++	unsigned long flags;
++	int norm_utilisation = 0;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -1;
++	}
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	norm_utilisation = platform->norm_utilisation;
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++
++	return norm_utilisation;
++}
++
++/**
++ * Get a number of statsistics under the same lock, so they are all 'in sync'
++ */
++void gpu_ipa_dvfs_get_utilisation_stats(struct mali_debug_utilisation_stats *stats)
++{
++	unsigned long flags;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return ;
++	}
++
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	stats->s.utilisation = platform->utilization;
++	stats->s.norm_utilisation = platform->norm_utilisation;
++	stats->s.freq_for_norm =platform->freq_for_normalisation;
++	stats->time_busy = platform->time_busy;
++	stats->time_idle = platform->time_idle;
++	stats->time_tick = platform->time_tick;
++	stats->s.util_gl_share = platform->util_gl_share;
++	stats->s.util_cl_share[0] = platform->util_cl_share[0];
++	stats->s.util_cl_share[1] = platform->util_cl_share[1];
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++}
++
++int gpu_ipa_dvfs_max_lock(int clock)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -ENODEV;
++	}
++
++	platform->target_lock_type = IPA_LOCK;
++
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_LOCK, clock);
++	return 0;
++}
++
++int gpu_ipa_dvfs_max_unlock(void)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -ENODEV;
++	}
++
++	platform->target_lock_type = IPA_LOCK;
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_UNLOCK, 0);
++	return 0;
++}
++
++int get_ipa_dvfs_max_freq(void)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform;
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++
++	if (!platform) {
++		GPU_LOG(DVFS_ERROR, "platform context (0x%p) is not initialized within %s\n", platform, __FUNCTION__);
++		return -ENODEV;
++	}
++
++	return platform->table[platform->table_size - 1].clock;
++}
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.h
+new file mode 100644
+index 0000000..f151c13
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_ipa.h
+@@ -0,0 +1,21 @@
++#ifndef _GPU_IPA_H_
++#define _GPU_IPA_H_
++
++#include <mali_kbase.h>
++#include "mali_kbase_platform.h"
++
++#if SOC_NAME == 5422
++#define POWER_COEFF_GPU 59 /* all core on param */
++#elif SOC_NAME == 5430
++#define POWER_COEFF_GPU 46 /* Scale_to_Helsinki (0.777777778) value was multiplied */
++#endif
++
++struct mali_debug_utilisation_stats;
++
++int gpu_ipa_dvfs_get_norm_utilisation(struct kbase_device *kbdev);
++void gpu_ipa_dvfs_get_utilisation_stats(struct mali_debug_utilisation_stats *stats);
++void gpu_ipa_dvfs_calc_norm_utilisation(struct kbase_device *kbdev);
++int gpu_ipa_dvfs_max_lock(int clock);
++int gpu_ipa_dvfs_max_unlock(void);
++int get_ipa_dvfs_max_freq(void);
++#endif
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.c
+new file mode 100644
+index 0000000..3da197c
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.c
+@@ -0,0 +1,260 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 platform-dependent codes
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_notifier.c
++ */
++
++#include <mali_kbase.h>
++
++#include <linux/suspend.h>
++#include <linux/pm_runtime.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_notifier.h"
++#include "gpu_control.h"
++
++#if defined(CONFIG_EXYNOS_THERMAL)
++#include <mach/tmu.h>
++#endif /* CONFIG_EXYNOS_THERMAL */
++
++extern struct kbase_device *pkbdev;
++
++#if defined(CONFIG_EXYNOS_THERMAL)
++static int gpu_tmu_hot_check_and_work(struct kbase_device *kbdev, unsigned long event)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct exynos_context *platform;
++	int lock_clock;
++
++	KBASE_DEBUG_ASSERT(kbdev != NULL);
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	switch (event) {
++	case GPU_THROTTLING1:
++		lock_clock = GPU_THROTTLING_90_95;
++		GPU_LOG(DVFS_INFO, "[G3D] GPU_THROTTLING_90_95\n");
++		break;
++	case GPU_THROTTLING2:
++		lock_clock = GPU_THROTTLING_95_100;
++		GPU_LOG(DVFS_INFO, "[G3D] GPU_THROTTLING_95_100\n");
++		break;
++	case GPU_THROTTLING3:
++		lock_clock = GPU_THROTTLING_100_105;
++		GPU_LOG(DVFS_INFO, "[G3D] GPU_THROTTLING_100_105\n");
++		break;
++	case GPU_THROTTLING4:
++		lock_clock = GPU_THROTTLING_105_110;
++		GPU_LOG(DVFS_INFO, "[G3D] GPU_THROTTLING_105_110\n");
++		break;
++	case GPU_TRIPPING:
++		lock_clock = GPU_TRIPPING_110;
++		GPU_LOG(DVFS_INFO, "[G3D] GPU_THROTTLING_110\n");
++		break;
++	default:
++		GPU_LOG(DVFS_ERROR, "[G3D] Wrong event, %lu,  in the kbase_tmu_hot_check_and_work function\n", event);
++		return 0;
++	}
++
++	platform->target_lock_type = TMU_LOCK;
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_LOCK, lock_clock);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	return 0;
++}
++
++static void gpu_tmu_normal_work(struct kbase_device *kbdev)
++{
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	struct exynos_context *platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return;
++
++	platform->target_lock_type = TMU_LOCK;
++	gpu_dvfs_handler_control(kbdev, GPU_HANDLER_DVFS_MAX_UNLOCK, 0);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++}
++
++static int gpu_tmu_notifier(struct notifier_block *notifier,
++				unsigned long event, void *v)
++{
++	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	if (!platform->tmu_status)
++		return NOTIFY_OK;
++
++	platform->voltage_margin = 0;
++
++	if (event == GPU_COLD) {
++		platform->voltage_margin = VOLTAGE_OFFSET_MARGIN;
++	} else if (event == GPU_NORMAL) {
++		gpu_tmu_normal_work(pkbdev);
++	} else if (event >= GPU_THROTTLING1 && event <= GPU_TRIPPING) {
++		if (gpu_tmu_hot_check_and_work(pkbdev, event))
++			GPU_LOG(DVFS_ERROR, "failed to open device");
++	}
++	KBASE_TRACE_ADD_EXYNOS(pkbdev, LSI_TMU_VALUE, NULL, NULL, 0u, event);
++
++	gpu_control_state_set(pkbdev, GPU_CONTROL_SET_MARGIN, 0);
++
++	return NOTIFY_OK;
++}
++
++static struct notifier_block gpu_tmu_nb = {
++	.notifier_call = gpu_tmu_notifier,
++};
++#endif /* CONFIG_EXYNOS_THERMAL */
++
++#ifdef KBASE_PM_RUNTIME
++static int gpu_pm_notifier(struct notifier_block *nb, unsigned long event, void *cmd)
++{
++	int err = NOTIFY_OK;
++	switch (event) {
++	case PM_SUSPEND_PREPARE:
++		KBASE_TRACE_ADD_EXYNOS(pkbdev, LSI_SUSPEND, NULL, NULL, 0u, 0u);
++		break;
++	case PM_POST_SUSPEND:
++		KBASE_TRACE_ADD_EXYNOS(pkbdev, LSI_RESUME, NULL, NULL, 0u, 0u);
++		break;
++	default:
++		break;
++	}
++	return err;
++}
++
++static int gpu_power_on(struct kbase_device *kbdev)
++{
++	int ret_val;
++
++	if (pm_runtime_status_suspended(kbdev->dev))
++		ret_val = 1;
++	else
++		ret_val = 0;
++
++	pm_runtime_resume(kbdev->dev);
++
++	return ret_val;
++}
++
++static void gpu_power_off(struct kbase_device *kbdev)
++{
++	pm_schedule_suspend(kbdev->dev, RUNTIME_PM_DELAY_TIME);
++}
++
++static struct notifier_block gpu_pm_nb = {
++	.notifier_call = gpu_pm_notifier
++};
++
++static int gpu_device_runtime_init(struct kbase_device *kbdev)
++{
++	pm_suspend_ignore_children(kbdev->dev, true);
++	return 0;
++}
++
++static void gpu_device_runtime_disable(struct kbase_device *kbdev)
++{
++	pm_runtime_disable(kbdev->dev);
++}
++
++static int pm_callback_runtime_on(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	GPU_LOG(DVFS_INFO, "g3d turn on\n");
++	KBASE_TRACE_ADD_EXYNOS(kbdev, LSI_GPU_ON, NULL, NULL, 0u, 0u);
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_control_state_set(kbdev, GPU_CONTROL_PREPARE_ON, 0);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	gpu_control_state_set(kbdev, GPU_CONTROL_CLOCK_ON, 0);
++	gpu_control_state_set(kbdev, GPU_CONTROL_CHANGE_CLK_VOL, platform->cur_clock);
++
++	return 0;
++}
++
++static void pm_callback_runtime_off(struct kbase_device *kbdev)
++{
++	GPU_LOG(DVFS_INFO, "g3d turn off\n");
++	KBASE_TRACE_ADD_EXYNOS(kbdev, LSI_GPU_OFF, NULL, NULL, 0u, 0u);
++
++	gpu_control_state_set(kbdev, GPU_CONTROL_CLOCK_OFF, 0);
++}
++
++static int pm_callback_runtime_idle(struct kbase_device *kbdev)
++{
++	/* Avoid pm_runtime_suspend being called. */
++	return 1;
++}
++
++struct kbase_pm_callback_conf pm_callbacks = {
++	.power_on_callback = gpu_power_on,
++	.power_off_callback = gpu_power_off,
++#ifdef KBASE_PM_RUNTIME
++	.power_runtime_init_callback = gpu_device_runtime_init,
++	.power_runtime_term_callback = gpu_device_runtime_disable,
++	.power_runtime_on_callback = pm_callback_runtime_on,
++	.power_runtime_off_callback = pm_callback_runtime_off,
++	.power_runtime_idle_callback = pm_callback_runtime_idle,
++#else /* KBASE_PM_RUNTIME */
++	.power_runtime_init_callback = NULL,
++	.power_runtime_term_callback = NULL,
++	.power_runtime_on_callback = NULL,
++	.power_runtime_off_callback = NULL,
++	.power_runtime_idle_callback = NULL,
++#endif /* KBASE_PM_RUNTIME */
++};
++#endif /* KBASE_PM_RUNTIME */
++
++int gpu_notifier_init(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform;
++
++#ifdef KBASE_PM_RUNTIME
++	int err;
++#endif
++
++	platform = (struct exynos_context *)kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	platform->voltage_margin = 0;
++#if defined(CONFIG_EXYNOS_THERMAL)
++	exynos_gpu_add_notifier(&gpu_tmu_nb);
++	platform->tmu_status = true;
++#else /* CONFIG_EXYNOS_THERMAL */
++	platform->tmu_status = false;
++#endif /* CONFIG_EXYNOS_THERMAL */
++
++#ifdef KBASE_PM_RUNTIME
++	err = register_pm_notifier(&gpu_pm_nb);
++	if (err)
++		return err;
++#endif /* KBASE_PM_RUNTIME */
++
++	pm_runtime_enable(kbdev->dev);
++
++	return 0;
++}
++
++void gpu_notifier_term(void)
++{
++#ifdef KBASE_PM_RUNTIME
++	unregister_pm_notifier(&gpu_pm_nb);
++#endif /* KBASE_PM_RUNTIME */
++	return;
++}
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.h
+new file mode 100644
+index 0000000..0aaef14
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/gpu_notifier.h
+@@ -0,0 +1,22 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 platform-dependent codes
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file gpu_notifier.h
++ */
++
++#ifndef _GPU_NOTIFIER_H_
++#define _GPU_NOTIFIER_H_
++
++int gpu_notifier_init(struct kbase_device *kbdev);
++void gpu_notifier_term(void);
++
++#endif /* _GPU_NOTIFIER_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_config_platform.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_config_platform.h
+new file mode 100644
+index 0000000..f29c2b4
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_config_platform.h
+@@ -0,0 +1,86 @@
++/*
++ * (C) COPYRIGHT 2014 ARM Limited. All rights reserved.
++ *
++ * This program is free software and is provided to you under the terms of the
++ * GNU General Public License version 2 as published by the Free Software
++ * Foundation, and any use by you of this program is subject to the terms
++ * of such GNU licence.
++ *
++ * A copy of the licence is included with the program, and can also be obtained
++ * from Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ * Boston, MA  02110-1301, USA.
++ *
++ */
++
++#ifndef _KBASE_CONFIG_PLATFORM_H_
++#define _KBASE_CONFIG_PLATFORM_H_
++
++#include "gpu_control.h"
++
++/**
++ * Maximum frequency GPU will be clocked at. Given in kHz.
++ * This must be specified as there is no default value.
++ *
++ * Attached value: number in kHz
++ * Default value: NA
++ */
++#define GPU_FREQ_KHZ_MAX G3D_MAX_FREQ
++/**
++ * Minimum frequency GPU will be clocked at. Given in kHz.
++ * This must be specified as there is no default value.
++ *
++ * Attached value: number in kHz
++ * Default value: NA
++ */
++#define GPU_FREQ_KHZ_MIN G3D_MIN_FREQ
++
++/**
++ * CPU_SPEED_FUNC - A pointer to a function that calculates the CPU clock
++ *
++ * CPU clock speed of the platform is in MHz - see kbase_cpu_clk_speed_func
++ * for the function prototype.
++ *
++ * Attached value: A kbase_cpu_clk_speed_func.
++ * Default Value:  NA
++ */
++#define CPU_SPEED_FUNC (&get_cpu_clock_speed)
++
++/**
++ * GPU_SPEED_FUNC - A pointer to a function that calculates the GPU clock
++ *
++ * GPU clock speed of the platform in MHz - see kbase_gpu_clk_speed_func
++ * for the function prototype.
++ *
++ * Attached value: A kbase_gpu_clk_speed_func.
++ * Default Value:  NA
++ */
++#define GPU_SPEED_FUNC (NULL)
++
++/**
++ * Power management configuration
++ *
++ * Attached value: pointer to @ref kbase_pm_callback_conf
++ * Default value: See @ref kbase_pm_callback_conf
++ */
++#define POWER_MANAGEMENT_CALLBACKS (&pm_callbacks)
++
++/**
++ * Platform specific configuration functions
++ *
++ * Attached value: pointer to @ref kbase_platform_funcs_conf
++ * Default value: See @ref kbase_platform_funcs_conf
++ */
++#define PLATFORM_FUNCS (&platform_funcs)
++
++/**
++ * Secure mode switch
++ *
++ * Attached value: pointer to @ref kbase_secure_ops
++ */
++#define SECURE_CALLBACKS (NULL)
++
++extern int get_cpu_clock_speed(u32* cpu_clock);
++extern struct kbase_pm_callback_conf pm_callbacks;
++extern struct kbase_platform_funcs_conf platform_funcs;
++
++#endif /* _KBASE_CONFIG_PLATFORM_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.c b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.c
+new file mode 100644
+index 0000000..23f8f12
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.c
+@@ -0,0 +1,253 @@
++/*
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 platform-dependent codes
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file mali_kbase_platform.c
++ * Platform-dependent init.
++ */
++
++#include <mali_kbase.h>
++
++#include <mach/regs-pmu.h>
++#include <plat/devs.h>
++
++#include "mali_kbase_platform.h"
++#include "gpu_custom_interface.h"
++#include "gpu_dvfs_handler.h"
++#include "gpu_notifier.h"
++#include "gpu_dvfs_governor.h"
++#include "gpu_control.h"
++#include "gpu_ipa.h"
++
++#ifndef CONFIG_OF
++static struct kbase_io_resources io_resources = {
++	.job_irq_number   = JOB_IRQ_NUMBER,
++	.mmu_irq_number   = MMU_IRQ_NUMBER,
++	.gpu_irq_number   = GPU_IRQ_NUMBER,
++	.io_memory_region = {
++		.start = EXYNOS5_PA_G3D,
++		.end   = EXYNOS5_PA_G3D + (4096 * 4) - 1
++	}
++};
++#endif
++
++static int gpu_debug_level;
++
++void gpu_set_debug_level(int level)
++{
++	gpu_debug_level = level;
++}
++
++int gpu_get_debug_level(void)
++{
++	return gpu_debug_level;
++}
++
++/**
++ ** Exynos5 hardware specific initialization
++ **/
++static int kbase_platform_exynos5_init(struct kbase_device *kbdev)
++{
++	int err;
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	unsigned long flags;
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	struct exynos_context *platform;
++
++	platform = kmalloc(sizeof(struct exynos_context), GFP_KERNEL);
++
++	if (!platform)
++		return -ENOMEM;
++
++	memset(platform, 0, sizeof(struct exynos_context));
++
++	kbdev->platform_context = (void *) platform;
++
++	platform->cmu_pmu_status = 0;
++	platform->dvfs_wq = NULL;
++	platform->polling_speed = 100;
++	gpu_debug_level = DVFS_WARNING;
++
++	mutex_init(&platform->gpu_clock_lock);
++	mutex_init(&platform->gpu_dvfs_handler_lock);
++	spin_lock_init(&platform->gpu_dvfs_spinlock);
++
++	err = gpu_control_module_init(kbdev);
++	if (err)
++		goto clock_init_fail;
++
++	/* dvfs gobernor init*/
++	gpu_dvfs_governor_init(kbdev, G3D_DVFS_GOVERNOR_DEFAULT);
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
++	platform->wakeup_lock = 0;
++	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++	/* dvfs handler init*/
++	gpu_dvfs_handler_init(kbdev);
++
++	err = gpu_notifier_init(kbdev);
++	if (err)
++		goto notifier_init_fail;
++
++	err = gpu_create_sysfs_file(kbdev->dev);
++	if (err)
++		goto sysfs_init_fail;
++
++	return 0;
++
++clock_init_fail:
++notifier_init_fail:
++sysfs_init_fail:
++	kfree(platform);
++
++	return err;
++}
++
++/**
++ ** Exynos5 hardware specific termination
++ **/
++static void kbase_platform_exynos5_term(struct kbase_device *kbdev)
++{
++	struct exynos_context *platform;
++	platform = (struct exynos_context *) kbdev->platform_context;
++
++	gpu_notifier_term();
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	gpu_dvfs_handler_deinit(kbdev);
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++	gpu_control_module_term(kbdev);
++
++	kfree(kbdev->platform_context);
++	kbdev->platform_context = 0;
++
++	gpu_remove_sysfs_file(kbdev->dev);
++}
++
++struct kbase_platform_funcs_conf platform_funcs = {
++	.platform_init_func = &kbase_platform_exynos5_init,
++	.platform_term_func = &kbase_platform_exynos5_term,
++};
++
++extern struct kbase_pm_callback_conf pm_callbacks;
++extern int get_cpu_clock_speed(u32 *cpu_clock);
++
++struct kbase_platform_config platform_config = {
++#ifndef CONFIG_OF
++	.io_resources = &io_resources
++#endif
++};
++
++struct kbase_platform_config *kbase_get_platform_config(void)
++{
++	return &platform_config;
++}
++
++int kbase_platform_early_init(void)
++{
++	/* Nothing to do */
++	return 0;
++}
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++
++#define POWER_COEFF_GPU_ALL_CORE_ON 64  /* all core on param */
++
++/* This is a temporary value. To get STATIC_POWER_COEFF you need to do
++ * a "one off" calculation - i.e. you attach the necessary probes to a board,
++ * get the board into "GPU on but idle", switch to the always_on policy and
++ * measure the power at different frequency points
++ * STATIC_POWER_COEFF = div_u64(power * 100000,(u64)freq * voltage * voltage)
++ */
++#define STATIC_POWER_COEFF 3
++#define DYNAMIC_POWER_COEFF (POWER_COEFF_GPU_ALL_CORE_ON - STATIC_POWER_COEFF)
++
++extern struct kbase_device *pkbdev;
++
++/*  Get the current utilization of the gpu */
++int get_gpu_util(void)
++{
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	return platform->utilization;
++}
++
++/* Get power consumption of GPU assuming utilization */
++int get_gpu_power(int util)
++{
++	unsigned int freq;
++	unsigned int vol;
++	int power = 0;
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	/* Get the frequency and voltage for the level */
++	freq = platform->table[platform->step].clock;
++	vol = platform->table[platform->step].voltage / 10000;
++
++	/* Calculate power */
++	power = (int)div_u64(
++			((u64)STATIC_POWER_COEFF * freq * vol * vol) +
++			((u64)DYNAMIC_POWER_COEFF * util * freq * vol * vol),
++			100000);
++
++	return power;
++}
++
++/* Limit the frequency of the GPU to match the power assuming utilization */
++int set_gpu_power_cap(int gpu_power, int util)
++{
++	int level = 1;
++	unsigned int freq;
++	unsigned int vol;
++	int required_power;
++
++	struct kbase_device *kbdev = pkbdev;
++	struct exynos_context *platform = (struct exynos_context *) kbdev->platform_context;
++	if (!platform)
++		return -ENODEV;
++
++	BUG_ON(platform->table_size == 0);
++
++	while (level < platform->table_size) {
++		vol = platform->table[level].voltage / 10000;
++		freq = platform->table[level].clock;
++		required_power = (int)div_u64(
++				((u64)STATIC_POWER_COEFF * freq * vol * vol) +
++				((u64)DYNAMIC_POWER_COEFF * util * freq * vol * vol),
++				100000);
++
++		if (required_power > gpu_power)
++			break;
++		level++;
++	}
++	level--;
++
++#ifdef CONFIG_CPU_THERMAL_IPA
++	gpu_ipa_dvfs_max_lock(platform->table[level].clock);
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++	return platform->table[level].clock;
++}
++
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++
++
++
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.h
+new file mode 100644
+index 0000000..d0c22ab
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_kbase_platform.h
+@@ -0,0 +1,206 @@
++/* 
++ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
++ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
++ *
++ * Samsung SoC Mali-T604 platform-dependent codes
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software FoundatIon.
++ */
++
++/**
++ * @file mali_kbase_platform.h
++ * Platform-dependent init
++ */
++
++#ifndef _GPU_PLATFORM_H_
++#define _GPU_PLATFORM_H_
++
++#if defined(CONFIG_MALI_EXYNOS_TRACE) && KBASE_TRACE_ENABLE
++#define KBASE_TRACE_ADD_EXYNOS(kbdev, code, ctx, katom, gpu_addr, info_val)     \
++	kbasep_trace_add(kbdev, KBASE_TRACE_CODE(code), ctx, katom, gpu_addr, \
++			0, 0, 0, info_val)
++#else
++#define KBASE_TRACE_ADD_EXYNOS(kbdev, code, subcode, ctx, katom, val)\
++	do {\
++		CSTD_UNUSED(kbdev);\
++		CSTD_NOP(code);\
++		CSTD_UNUSED(subcode);\
++		CSTD_UNUSED(ctx);\
++		CSTD_UNUSED(katom);\
++		CSTD_UNUSED(val);\
++		CSTD_NOP(0);\
++	} while(0)
++#endif
++
++#define GPU_LOG(level, msg, args...) \
++do { \
++	if (level >= gpu_get_debug_level()) { \
++		printk(KERN_INFO msg, ## args); \
++	} \
++} while (0)
++
++typedef enum {
++	DVFS_DEBUG = 0,
++	DVFS_INFO,
++	DVFS_WARNING,
++	DVFS_ERROR,
++	DVFS_DEBUG_END,
++} gpu_dvfs_debug_level;
++
++typedef enum gpu_lock_type {
++	TMU_LOCK = 0,
++	SYSFS_LOCK,
++#ifdef CONFIG_CPU_THERMAL_IPA
++	IPA_LOCK,
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	NUMBER_LOCK
++} gpu_lock_type;
++
++typedef struct _gpu_dvfs_info {
++	unsigned int voltage;
++	unsigned int clock;
++	int min_threshold;
++	int max_threshold;
++	int stay_count;
++	unsigned long long time;
++	int mem_freq;
++	int int_freq;
++	int cpu_freq;
++	int cpu_max_freq;
++} gpu_dvfs_info;
++
++struct exynos_context {
++	/** Indicator if system clock to mail-t604 is active */
++	int cmu_pmu_status;
++
++#if SOC_NAME == 5422
++	struct clk *fout_vpll;
++	struct clk *mout_vpll_ctrl;
++	struct clk *mout_dpll_ctrl;
++	struct clk *mout_aclk_g3d;
++	struct clk *dout_aclk_g3d;
++	struct clk *mout_aclk_g3d_sw;
++	struct clk *mout_aclk_g3d_user;
++	struct clk *clk_g3d_ip;
++#elif SOC_NAME == 5430
++	struct clk *fin_pll;
++	struct clk *fout_g3d_pll;
++	struct clk *aclk_g3d;
++	struct clk *mout_g3d_pll;
++	struct clk *dout_aclk_g3d;
++#elif SOC_NAME == 5260
++	struct clk *fout_vpll;
++	struct clk *ext_xtal;
++	struct clk *aclk_g3d;
++	struct clk *g3d;
++#else
++#error SOC_NAME should be specified.
++#endif
++
++	int clk_g3d_status;
++	struct regulator *g3d_regulator;
++
++	gpu_dvfs_info *table;
++#ifdef CONFIG_DYNIMIC_ABB
++	int *devfreq_g3d_asv_abb;
++#endif
++	int table_size;
++	int step;
++#ifdef KBASE_PM_RUNTIME
++	struct exynos_pm_domain *exynos_pm_domain;
++#endif /* KBASE_PM_RUNTIME */
++	struct mutex gpu_clock_lock;
++	struct mutex gpu_dvfs_handler_lock;
++	spinlock_t gpu_dvfs_spinlock;
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++	int utilization;
++	int util_gl_share;
++	int util_cl_share[2];
++#ifdef CONFIG_CPU_THERMAL_IPA
++	int norm_utilisation;
++	int freq_for_normalisation;
++	unsigned long long power;
++#endif /* CONFIG_CPU_THERMAL_IPA */
++	int max_lock;
++	int min_lock;
++	int user_max_lock[NUMBER_LOCK];
++	int user_min_lock[NUMBER_LOCK];
++	int target_lock_type;
++	int down_requirement;
++	bool wakeup_lock;
++	int governor_num;
++	int governor_type;
++	char governor_list[100];
++	bool dvfs_status;
++#ifdef CONFIG_CPU_THERMAL_IPA
++	int time_tick;
++	u32 time_busy;
++	u32 time_idle;
++#endif /* CONFIG_CPU_THERMAL_IPA */
++#endif
++	int cur_clock;
++	int cur_voltage;
++	int voltage_margin;
++	bool tmu_status;
++	int debug_level;
++	int polling_speed;
++	struct workqueue_struct *dvfs_wq;
++};
++
++#ifdef CONFIG_CPU_THERMAL_IPA
++struct mali_utilisation_stats
++{
++	int utilisation;
++	int util_gl_share;
++	int util_cl_share[2];
++	int norm_utilisation;
++	int freq_for_norm;
++};
++
++struct mali_debug_utilisation_stats
++{
++	struct mali_utilisation_stats s;
++	u32 time_busy;
++	u32 time_idle;
++	int time_tick;
++};
++#endif /* CONFIG_CPU_THERMAL_IPA */
++
++void gpu_set_debug_level(int level);
++int gpu_get_debug_level(void);
++
++int kbase_platform_early_init(void);
++
++#ifdef CONFIG_MALI_MIDGARD_DVFS
++
++/** Get the current utilization of the gpu
++ *
++ * Returns the current utilization of the GPU (0 - 100)
++ */
++int get_gpu_util(void);
++
++/** Get power consumption of GPU based on utilization. Power is calculated on
++ * the basis of Static and Dynamic power coefficients taking into account the
++ * frequency, voltage and utilization of the GPU.
++ *
++ * @param util   Utilization of the GPU (0-100)
++ *
++ * @return Power consumed by the GPU
++ */
++int get_gpu_power(int util);
++
++/** Limit the frequency of the CPU to match the power assuming utilization
++ *
++ * @param gpu_power     Power consumed by the GPU
++ * @param util          Utilization of the GPU (0-100)
++ *
++ * @return              Maximum frequency in MHz which matches the given 
++ *		                utilization and power
++ */
++int set_gpu_power_cap(int gpu_power, int util);
++
++#endif /* CONFIG_MALI_MIDGARD_DVFS */
++
++#endif /* _GPU_PLATFORM_H_ */
+diff --git a/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_power.h b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_power.h
+new file mode 100644
+index 0000000..c96e5f3
+--- /dev/null
++++ b/driver/product/kernel/drivers/gpu/arm/midgard/platform/5422/mali_power.h
+@@ -0,0 +1,48 @@
++/*
++ * Tracepoints for Mali Power integration
++ */
++
++#undef TRACE_SYSTEM
++#define TRACE_SYSTEM mali_power
++
++#if !defined(_MALI_POWER_H) || defined(TRACE_HEADER_MULTI_READ)
++#define _MALI_POWER_H
++
++#include <linux/tracepoint.h>
++
++TRACE_EVENT(mali_utilization_stats,
++
++	TP_PROTO(int util,
++		int norm_util,
++		int norm_freq),
++
++	TP_ARGS(util,
++		norm_util,
++		norm_freq),
++
++	TP_STRUCT__entry(
++			__field(int, util)
++			__field(int, norm_util)
++			__field(int, norm_freq)
++	),
++
++	TP_fast_assign(
++		__entry->util = util;
++		__entry->norm_util = norm_util;
++		__entry->norm_freq = norm_freq;
++	),
++
++	TP_printk("util=%d norm_util=%d norm_freq=%d",
++				__entry->util,
++				__entry->norm_util,
++				__entry->norm_freq)
++);
++
++
++#endif				/* _MALI_POWER_H */
++
++#undef TRACE_INCLUDE_PATH
++#define TRACE_INCLUDE_PATH MALI_KBASE_THIRDPARTY_PATH
++
++/* This part must be outside protection */
++#include <trace/define_trace.h>
+-- 
+1.7.9.5
+
