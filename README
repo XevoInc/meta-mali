@@ -3,11 +3,10 @@ ARM Mali BSP layer
 
 These recipes provide a BSP layer for ARM development platforms with
 ARM Mali technology enabled.  To build a minimal image using
-OpenEmbedded (OE) or Yocto/Poky for ODROID-XU3 which features a
-Mali-T62x GPU:
+OpenEmbedded (OE) for ODROID-XU3 which features a Mali-T62x GPU:
 
-OpenEmbedded set-up
--------------------
+Initial setup
+-------------
 
 * Get OE meta-data with:
     git clone -b jethro git://git.openembedded.org/openembedded-core
@@ -23,26 +22,11 @@ OpenEmbedded set-up
 
 * Add DEFAULTTUNE = "armv7athf" to openembedded-core/build/conf/local.conf
 
-Yocto/Poky set-up
------------------
-
-* Get Poky meta-data with:
-    git clone -b jethro git://git.yoctoproject.org/poky.git
-
-* Prepare the build environment:
-    cd poky && source oe-init-build-env
-
-* Add path to meta-mali in poky/build/conf/bblayers.conf
-
-* Set MACHINE to odroidxu3 in poky/build/conf/local.conf
-
-* Add DEFAULTTUNE = "armv7athf" to poky/build/conf/local.conf
-
 Building
 --------
 
-Once you've initialised your build environment for either OE or Poky,
-the commands to build a full image are the same in both cases.
+Once you've initialised your build environment the following commands can
+be run to build and flash a basic image without the Mali drivers:
 
 * Run this command to build a basic image:
     bitbake core-image-minimal
@@ -55,11 +39,10 @@ the commands to build a full image are the same in both cases.
 
 * When the build is complete, a full SD card image will be ready to be
   written to an SD card to boot the ODROID-XU3:
-    tmp/deploy/images/odroidxu3/core-image-minimal-odroidxu3.sdcard
+    tmp-glibc/deploy/images/odroidxu3/core-image-minimal-odroidxu3.sdcard
 
   For example, if your SD card device is /dev/sdX (adjust as appropriate):
     dd if=core-image-minimal-odroidxu3.sdcard of=/dev/sdX bs=1M
-
 
 ARM Mali GPU User-side drivers
 ==============================
@@ -79,21 +62,21 @@ To add the user-side binary to your build, add this line to local.conf:
 
     IMAGE_INSTALL_append = " mali-userspace-t62x"
 
-Because the Mali recipes provide EGL and OpenGL ES but not OpenGL,
-there is a conflict with the Mesa recipes which are needed for X11 and
-Wayland.  So the current Mali GPU support in OE does not work with
-windowing systems but only "directfb" mode (a.k.a "fbdev").  The
-core-image-minimal includes X11, so to convert it to "directfb" you
-will also need to add these two lines to local.conf:
+Because the Mali recipes can provide support only for one windowing at
+a time, user needs to specify DISTRO_FEATURES before building the image.
 
+For core-image-minimal (fbdev), please use:
     DISTRO_FEATURES_append = " directfb sysvinit"
     DISTRO_FEATURES_remove = " x11 wayland"
 
-With these modifications done in local.conf, building the image again
-will produce a new SD card image with the Mali GPU drivers enabled:
+For core-image-weston (Wayland), please use:
+    DISTRO_FEATURES_append = " wayland opengl"
+    DISTRO_FEATURES_remove = " x11 directfb"
 
-    bitbake core-image-minimal
-
+With these modifications done in local.conf, building the image will
+produce a new SD card image with the Mali GPU drivers enabled. When
+creating image supporting Wayland, Mesa will be built as well. This is
+needed by some of the dependancies.
 
 Resizing root filesystem on SD card
 ===================================
@@ -102,9 +85,16 @@ Root filesystem created on SD card image can be resized using custom
 script called resize-rootfs. To include this script in your build, add
 resize-rootfs to IMAGE_INSTALL_append list in local.conf, e.g.:
 
-    IMAGE_INSTALL_append = " mali-userspace-t62x resize-rootfs"
+    IMAGE_INSTALL_append += " resize-rootfs"
 
 Script requires invoking twice (once for every step) on the device.
-Step 1 ends with automatic system reboot. Keep in mind this is experimental
-feature and it can destroy all data on the SD card. It should be used
-only during development process.
+Step 1 ends with automatic system reboot. Keep in mind this is
+experimental feature and it can destroy all data on the SD card. It
+should be used only during development process.
+
+Known issues
+============
+
+* when building with mali-userspace-t62x drivers final rootfs image
+  will fail to create when PACKAGE_CLASSES = "package_rpm" is set, to
+  avoid that please use ipk or deb;
