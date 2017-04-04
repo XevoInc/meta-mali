@@ -45,7 +45,7 @@ inherit kernel
 require recipes-kernel/linux/linux-yocto.inc
 FILESEXTRAPATHS_prepend:= "${THISDIR}/${PN}_${PV}:"
 
-LINUX_VERSION ?= "3.10"
+LINUX_VERSION ?= "3.10.69"
 
 SRC_URI = " \
 	git://github.com/ARM-software/linux.git;protocol=https;nocheckout=1;branch=${SRCBRANCH} \
@@ -55,7 +55,6 @@ SRCBRANCH = "odroidxu3-3.10.y-mali-a"
 SRCREV = "odroidxu3-3.10.y-mali-a-003"
 SRCREV_machine = "${SRCREV}"
 
-PR = "69"
 PV = "${LINUX_VERSION}"
 
 COMPATIBLE_MACHINE = "(odroidxu3)"
