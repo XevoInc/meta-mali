@@ -47,9 +47,9 @@ FILESEXTRAPATHS_prepend:= "${THISDIR}/${PN}_${PV}:"
 
 LINUX_VERSION ?= "3.10.69"
 
-SRC_URI = " \
-	git://github.com/ARM-software/linux.git;protocol=https;nocheckout=1;branch=${SRCBRANCH} \
-"
+SRC_URI = "git://github.com/ARM-software/linux.git;protocol=https;nocheckout=1;branch=${SRCBRANCH} \
+           file://0001-compiler-gcc-integrate-the-various-compiler-gcc-345-.patch \
+           "
 
 SRCBRANCH = "odroidxu3-3.10.y-mali-a"
 SRCREV = "odroidxu3-3.10.y-mali-a-003"
